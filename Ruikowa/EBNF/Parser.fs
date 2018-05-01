@@ -123,8 +123,6 @@ let Transaction (``what's true``: Result -> bool) (``true action``) (``false act
         false
 
 
-
-
 type Spec'ComposedParser = 
     | Single      of LiteralParser
     | Or          of ComposedParser array
@@ -133,7 +131,9 @@ type Spec'ComposedParser =
     | Named       of name: string
     | NameBinding of name: string * ComposedParser
 
-and  ComposedParser(it: Spec'ComposedParser, lang: LanguageArea) =
+
+
+and ComposedParser(it: Spec'ComposedParser, lang: LanguageArea) =
     interface Parser with
         member this.Lang = lang
         
@@ -232,7 +232,7 @@ and  ComposedParser(it: Spec'ComposedParser, lang: LanguageArea) =
                         Transaction 
                             (fun each -> each.status <> Matched)
                             (fun _    -> state.trace.Reset history)
-                            (fun each  -> parsed.Add each.ast)
+                            (fun each -> parsed.Add each.ast)
 
                     result 
                     |> Seq.tryFind transaction
