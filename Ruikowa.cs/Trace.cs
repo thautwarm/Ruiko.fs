@@ -14,6 +14,7 @@ namespace Ruikowa.CSharp
 
         public void NewOne()
         {
+            
             if (Count < _trace.Mem)
             {
                 _trace[_trace.Length++].Length = 0;
