@@ -9,8 +9,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="EBNF\Parser.fs" />
+    
+    <Compile Include="EBNF\Utils.fs" />
+    <Compile Include="EBNF\Collections.fs" />
+    <Compile Include="EBNF\ConstStringPool.fs" />
+    <Compile Include="EBNF\_Parser2.fs" />
+    <Compile Include="EBNF\_Parser.fs" />
     <Compile Include="Library.fs" />
+    <Compile Include="EBNF\Parser.fs" />
   </ItemGroup>
 
 
