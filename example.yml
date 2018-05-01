@@ -1,0 +1,32 @@
+# processed ruiko file
+
+# define String   : read definition of `string`       from $RUIKO_HOME/std.ruiko.
+# define Name     : read definition of `unicode_name` from $RUIKO_HOME/std.ruiko.
+# define Space    : read definition of `space`        from $RUIKO_HOME/std.ruiko.
+# define Comments : read definition of `comments`     from $RUIKO_HOME/cpp.ruiko.
+
+tokenizer: 0
+ast      : 1
+
+
+ignore:
+  name : ['Space']
+  value: []
+
+deep:
+  type : tokenizer
+  cast : true
+  cases: [{'type': 'regex', 'value': 'dee(p)+'}]
+  at   : 
+    before: []
+    after : [{'by': 'value', 'target': 'dark'}, {'by': 'value', 'target': 'fantasy'}]
+    when  : null
+    where : null
+
+    
+  
+
+  
+
+
+

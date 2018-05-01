@@ -670,11 +670,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\twshe\\source\\repos\\Ruiko\\Ruiko\\Ruiko.csproj",
+      "projectUniqueName": "C:\\Users\\twshe\\Desktop\\workload\\Ruiko.fs\\Ruiko\\Ruiko.csproj",
       "projectName": "Ruiko",
-      "projectPath": "C:\\Users\\twshe\\source\\repos\\Ruiko\\Ruiko\\Ruiko.csproj",
+      "projectPath": "C:\\Users\\twshe\\Desktop\\workload\\Ruiko.fs\\Ruiko\\Ruiko.csproj",
       "packagesPath": "C:\\Users\\twshe\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\twshe\\source\\repos\\Ruiko\\Ruiko\\obj\\",
+      "outputPath": "C:\\Users\\twshe\\Desktop\\workload\\Ruiko.fs\\Ruiko\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder"

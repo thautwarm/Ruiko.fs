@@ -1,0 +1,81 @@
+/* 
+keywords:
+    import
+    ignore
+    cast 
+    as
+    when
+    where
+    at
+    throw
+    deflexer
+
+operator:
+    =>  : 
+        - for combined  parser definition
+        - for import alias
+    ->  : 
+        - for tokenizer definition. 
+        - if no custom lexer definitions found, 
+            it'll be used for lexer definition, too.
+    =   : define (value/function)macro
+
+*/
+
+import 
+    std.{
+        string       => String 
+        unicode_name => Name
+        space        => Space 
+    },    
+    cpp.{
+        comments     => Comments
+    }
+
+/* ignore tokens by name/value 
+    type Token(name: const string, 
+               value: string, 
+               colno: int, 
+               lineno: int, 
+               filename: string)
+*/
+
+ignore {
+    Space by name
+}
+
+
+/* Type 0 */
+
+deep cast   -> 
+    R'dee(p)+' at deep 'dark' 'fantasy'
+
+
+Example0    => 
+    'E0' at '{' Example0 '}'
+    
+
+XML         => 
+        tagBegin(tag=Name) 
+            Block* as content
+        tagEnd(&tag)
+        
+        where
+            tagBegin x = '<' x '>'
+            tagEnd   x = '<' '/' x '>'
+        
+        when _ =>
+            [tag, content]
+
+pat         =>    
+        | ?'...' '_'
+        | ?'...' refName 
+        | tuplePat       
+        | dictPat        
+        | string         
+        | const          
+        | number ;
+
+
+
+

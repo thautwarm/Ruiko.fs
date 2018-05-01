@@ -4,12 +4,12 @@ using System.Text;
 
 namespace Ruiko.Meta
 {
-    public interface Ast
+    public interface IAST
     {
        string Name { get; }
     }
 
-    public class Single: Ast
+    public class Single: IAST
     {
         public readonly Tokenizer Token;
         public string Name => Token.Name;
@@ -20,9 +20,9 @@ namespace Ruiko.Meta
         }
     }
 
-    public class Nested: Ast
+    public class Nested: IAST
     {
-        public List<Ast> Structure;
+        public List<IAST> Structure;
         private readonly string s_name;
         public string Name => s_name;
 
@@ -31,10 +31,10 @@ namespace Ruiko.Meta
             s_name = name;
         }
 
-        public Nested(string name, Ast[] structure)
+        public Nested(string name, IAST[] structure)
         {
             s_name = name;
-            Structure = new List<Ast>(structure);
+            Structure = new List<IAST>(structure);
         }
     }
 

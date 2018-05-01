@@ -17,6 +17,10 @@ namespace Ruiko.Meta
             End     = end;
             Depth   = begin - end;
         }
-
+    }
+    
+    public class ImpossibleException: Exception
+    {
+        // This one is impossile :)
     }
 }

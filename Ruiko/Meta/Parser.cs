@@ -5,7 +5,8 @@ using System.Linq;
 
 namespace Ruiko.Meta
 {
-    using Result = Result<Ast>;
+    using Result    = Result<IAST>;
+    using Predicate = Func<IAST, Status>;
     public interface IParser
     {
         string Name { get; }
@@ -138,23 +139,32 @@ namespace Ruiko.Meta
     public interface ICombinedParser : IParser
     {
         List<IParser> Structure { get; set; }
+
+        Status ThrowRule(IAST ast);
     }
 
     public class AndParser : ICombinedParser
     {
         private string s_name;
-        private List<IParser> _structure;
+        private List<IParser> s_structure;
+        private Predicate s_throwRule;
+
+        public Status ThrowRule(IAST ast) => s_throwRule(ast);
+
         List<IParser> ICombinedParser.Structure
         {
-            get => _structure;
-            set => _structure = value;
+            get => s_structure;
+            set => s_structure = value;
         }
 
         public string Name => s_name;
 
-        public AndParser(string name, params IParser[] parsers)
+        string IParser.Name => throw new NotImplementedException();
+
+        public AndParser(string name, IParser[] parsers, Predicate throwRule)
         {
-            _structure = new List<IParser>(collection: parsers);
+            s_throwRule = throwRule;
+            s_structure = new List<IParser>(collection: parsers);
             s_name = name ?? string.Join(" ", parsers.Select(_ => _.Name));
         }
 
@@ -177,7 +187,8 @@ namespace Ruiko.Meta
             var parsed = new Nested(s_name);
 
             Result result;
-            foreach (var parser in _structure)
+
+            foreach (var parser in s_structure)
             {
 
                 try
@@ -186,52 +197,117 @@ namespace Ruiko.Meta
                 }
                 catch (LeftRecursionDetected e)
                 {
+                    /// Handling Left Recursions.
                     if (e.Depth == 0)
                         goto LR;
                     --e.Depth;
                     throw e;
                 }
 
-                if (result.Status == Status.Matched)
+                if (result.Status != Status.Matched)
                 {
-                    parsed.Structure.Add(result.Value);
-                    continue;
+                    parsing.Reset(history);
+                    return result;
                 }
 
-                // unmatched here:
-                parsing.Reset(history);
-                return result;
-            }
 
+                if (parser is ISequenceParser)
+                {
+                    var nested = result.Value as Nested;
+                    if (s_throwRule == null)
+                    {
+                        parsed.Structure.AddRange(nested.Structure);
+                    }
+                    else
+                    {
+                        foreach(var each in nested.Structure)
+                        {
+                            var status = ThrowRule(each);
+                            switch (status)
+                            {
+                                case Status.Matched:
+                                    parsed.Structure.Add(each);
+                                    continue;
+                                case Status.Ignore:
+                                    continue;
+                                case Status.Return:
+                                    break;
+                                case Status.Finished:
+                                    return Result.Finsihed;
+                                case Status.Unmatched:
+                                    goto Unmatched;
+                                case Status.Exit:
+                                    return Result.Exit;
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    if (s_throwRule == null)
+                        parsed.Structure.Add(result.Value);
+                    else
+                    {
+                        switch (ThrowRule(result.Value))
+                        {
+                            case Status.Matched:
+                                parsed.Structure.Add(result.Value);
+                                break;
+                            case Status.Ignore:
+                                break;
+                            case Status.Return:
+                                return Result.Matched(parsed);
+                            case Status.Finished:
+                                return Result.Finsihed;
+                            case Status.Unmatched:
+                                goto Unmatched;
+                            case Status.Exit:
+                                return Result.Exit;
+                        }
+                    }
+                }
+            }
             return Result.Matched(parsed);
+
+
+            Unmatched:
+            parsing.Reset(history);
+            return Result.Unmatched;
 
             LR:
             throw new NotImplementedException("LR handling.");
         }
 
         public bool Equals(IParser other) => other is ICombinedParser && other.Name == Name;
+
+
+
     }
 
     public class OrParser : ICombinedParser
     {
 
         private string s_name;
-        private List<IParser> _structure;
-        List<IParser> ICombinedParser.Structure
-        {
-            get => _structure;
-            set => _structure = value;
-        }
+        private List<IParser> s_structure;
+        private Predicate<IAST> s_throwRule;
+        Status ICombinedParser.ThrowRule(IAST ast) => s_throwRule(ast);
 
         public string Name => s_name;
 
-        public OrParser(string name, params IParser[] parsers)
+        List<IParser> ICombinedParser.Structure
         {
-            _structure = new List<IParser>(collection: parsers);
+            get => s_structure;
+            set => s_structure = value;
+        }
+
+        public OrParser(string name, IParser[] parsers, Predicate<IAST> throwRule)
+        {
+            s_throwRule = throwRule;
+            s_structure = new List<IParser>(collection: parsers);
             s_name = name ?? string.Join(" | ", parsers.Select(_ => _.Name));
         }
 
-        Result<Ast> IParser.Match(List<Tokenizer> tokens, ParsingTrace parsing, Context context)
+        Result<IAST> IParser.Match(List<Tokenizer> tokens, ParsingTrace parsing, Context context)
         {
             if (tokens.Count == parsing.Count)
             {
@@ -249,7 +325,7 @@ namespace Ruiko.Meta
 
 
             Result result;
-            foreach (var parser in _structure)
+            foreach (var parser in s_structure)
             {
 
                 try
@@ -283,6 +359,13 @@ namespace Ruiko.Meta
 
         public bool Equals(IParser other) => other is ICombinedParser && other.Name == Name;
 
+        
+
+        
+    }
+
+    public interface ISequenceParser : IParser
+    {
 
     }
 
