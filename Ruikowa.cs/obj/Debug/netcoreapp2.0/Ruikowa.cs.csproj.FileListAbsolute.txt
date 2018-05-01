@@ -1,8 +1,0 @@
-C:\Users\twshe\Desktop\workload\Ruiko.fs\Ruikowa.cs\bin\Debug\netcoreapp2.0\Ruikowa.cs.deps.json
-C:\Users\twshe\Desktop\workload\Ruiko.fs\Ruikowa.cs\bin\Debug\netcoreapp2.0\Ruikowa.cs.dll
-C:\Users\twshe\Desktop\workload\Ruiko.fs\Ruikowa.cs\bin\Debug\netcoreapp2.0\Ruikowa.cs.pdb
-C:\Users\twshe\Desktop\workload\Ruiko.fs\Ruikowa.cs\obj\Debug\netcoreapp2.0\Ruikowa.cs.csproj.CoreCompileInputs.cache
-C:\Users\twshe\Desktop\workload\Ruiko.fs\Ruikowa.cs\obj\Debug\netcoreapp2.0\Ruikowa.cs.AssemblyInfoInputs.cache
-C:\Users\twshe\Desktop\workload\Ruiko.fs\Ruikowa.cs\obj\Debug\netcoreapp2.0\Ruikowa.cs.AssemblyInfo.cs
-C:\Users\twshe\Desktop\workload\Ruiko.fs\Ruikowa.cs\obj\Debug\netcoreapp2.0\Ruikowa.cs.dll
-C:\Users\twshe\Desktop\workload\Ruiko.fs\Ruikowa.cs\obj\Debug\netcoreapp2.0\Ruikowa.cs.pdb
