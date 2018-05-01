@@ -1,22 +1,71 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Text;
 
-namespace Ruiko.Meta
+namespace Ruikowa.CSharp
 {
     using History = ValueTuple<int, int>;
-    public class Trace<T> : IEnumerable<T> where T : class
+    public class Trace<T> : IEnumerable<T> where T: class
+    {
+        public int Count => _trace.Length;
+        private _Trace<_Trace<T>> _trace;
+        private _Trace<T> Current => _trace[Count - 1];
+        public Trace() => _trace = new _Trace<_Trace<T>>();
+
+        public void NewOne()
+        {
+            if (Count < _trace.Mem)
+            {
+                _trace[_trace.Length++].Length = 0;
+            }
+            else
+            {
+                _trace.Add(new _Trace<T>());
+            }
+        }
+
+        public int MacFetched => _trace.Mem;
+
+        #region consistent with _Trace.
+        
+        public void Add(T e) => Current.Add(e);
+
+        public T this[int idx] => Current[idx];
+
+        public int Find(T e) => Current.Find(e);
+
+        public T Pop() => Current.Pop();
+
+        public IEnumerator<T> GetEnumerator() => ((IEnumerable<T>)Current).GetEnumerator();
+
+        IEnumerator IEnumerable.GetEnumerator() => ((IEnumerable<T>)Current).GetEnumerator();
+        #endregion
+        #region version control
+        public History Commit()
+        {
+            return (Count, _trace[Count].Length);
+        }
+
+        public void Reset(History history)
+        {
+            var (count, length) = history;
+            _trace.Length = count;
+            _trace[count - 1].Length = length;
+        }
+        #endregion
+
+    }
+    internal class _Trace<T> : IEnumerable<T> where T : class
     {
         private List<T> _trace;
         private int _virtualLength;
 
-        public Trace()
+        public _Trace()
         {
             _trace = new List<T> { };
             _virtualLength = 0;
         }
-        public Trace(T[] arr)
+        public _Trace(T[] arr)
         {
             _trace = new List<T>(arr);
             _virtualLength = 0;
@@ -74,7 +123,6 @@ namespace Ruiko.Meta
             }
             return _trace[Length - 1];
         }
-
 
         public IEnumerator<T> GetEnumerator() => ((IEnumerable<T>)_trace).GetEnumerator();
 

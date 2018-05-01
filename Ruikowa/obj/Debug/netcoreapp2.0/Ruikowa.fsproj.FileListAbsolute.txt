@@ -1,0 +1,9 @@
+C:\Users\twshe\Desktop\workload\Ruiko.fs\Ruikowa\bin\Debug\netcoreapp2.0\Ruikowa.deps.json
+C:\Users\twshe\Desktop\workload\Ruiko.fs\Ruikowa\bin\Debug\netcoreapp2.0\Ruikowa.dll
+C:\Users\twshe\Desktop\workload\Ruiko.fs\Ruikowa\bin\Debug\netcoreapp2.0\Ruikowa.pdb
+C:\Users\twshe\Desktop\workload\Ruiko.fs\Ruikowa\bin\Debug\netcoreapp2.0\Ruikowa.cs.dll
+C:\Users\twshe\Desktop\workload\Ruiko.fs\Ruikowa\bin\Debug\netcoreapp2.0\Ruikowa.cs.pdb
+C:\Users\twshe\Desktop\workload\Ruiko.fs\Ruikowa\obj\Debug\netcoreapp2.0\Ruikowa.fsprojResolveAssemblyReference.cache
+C:\Users\twshe\Desktop\workload\Ruiko.fs\Ruikowa\obj\Debug\netcoreapp2.0\Ruikowa.fsproj.CopyComplete
+C:\Users\twshe\Desktop\workload\Ruiko.fs\Ruikowa\obj\Debug\netcoreapp2.0\Ruikowa.dll
+C:\Users\twshe\Desktop\workload\Ruiko.fs\Ruikowa\obj\Debug\netcoreapp2.0\Ruikowa.pdb
