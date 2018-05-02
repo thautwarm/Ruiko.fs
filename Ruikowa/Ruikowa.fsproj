@@ -5,18 +5,32 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <EmbeddedResource Remove="EBNF\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Ruikowa.cs\Ruikowa.cs.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     
-    <Compile Include="EBNF\Utils.fs" />
-    <Compile Include="EBNF\Collections.fs" />
-    <Compile Include="EBNF\ConstStringPool.fs" />
-    <Compile Include="EBNF\_Parser2.fs" />
-    <Compile Include="EBNF\_Parser.fs" />
+    
+    
+    
+    
+    
+    
+    <Compile Include="BNF\Tokenizer.fs" />
+    
+    
+    
+    <Compile Include="BNF\Utils.fs" />
+    
+    <Compile Include="BNF\AST.fs" />
+
+    <Compile Include="BNF\Result.fs" />
+    <Compile Include="BNF\Parser.fs" />
     <Compile Include="Library.fs" />
-    <Compile Include="EBNF\Parser.fs" />
   </ItemGroup>
 
 
