@@ -24,14 +24,19 @@ type  State  = {
             this.context <- context'record
          member this.Find(named: Named) = 
             this.trace.FindSameObj named 
-
-
+    
+and When = CDict<string, (Parser -> State -> bool)>
+and With = CDict<string, (Parser -> State -> AST -> bool)>
 and LanguageArea = CDict<string, Or>
 
-and result = Result<Named, AST>
+and Result = 
+    | Finished of AST
+    | Unmatched
+    | Matched of AST
+    | FindLR
 
 and Parser = 
-    abstract member Match: Tokenizer array -> State -> LanguageArea -> result
+    abstract member Match: Tokenizer array -> State -> LanguageArea -> Result
     abstract member Name: string
 
 and Parser'' =  
@@ -105,9 +110,11 @@ and Atom(union: Atom'Core) =
                     | 1, -1  -> sprintf "(%s)+"       it
                     | _, -1  -> sprintf "(%s){%d}"    it least 
                     | _      -> sprintf "(%s){%d %d}" it least most
+                    |> Const'Cast
                     |> fun it -> (core, it)
             | Binding(as'name, atom) ->
                 atom |> Parser''.ToName |> fun it -> sprintf "%s as %s" it as'name 
+                |> Const'Cast
                 |> fun it -> union, it
 
         member this.structure = core
@@ -125,7 +132,17 @@ and And(atoms: Atom array) =
     end 
     interface Parser with 
         member this.Name: string = name
-        member this.Match (tokens: Tokenizer array) (state: State) (lang : LanguageArea) = raise (NotImplementedException())
+        member this.Match (tokens: Tokenizer array) (state: State) (lang : LanguageArea) = 
+           
+
+           let for'each'term (term: Atom) = 
+               term |> Parser''.Match tokens state lang
+
+           this.structure 
+           |> Seq.map for'each'term
+           |> TODO
+               
+
         
         
 and Or(ands: And array) = 
@@ -139,34 +156,98 @@ and Or(ands: And array) =
 
     interface Parser with 
         member this.Name: string =  name
-        member this.Match (tokens: Tokenizer array) (state: State) (lang : LanguageArea) = raise (NotImplementedException())
+        member this.Match (tokens: Tokenizer array) (state: State) (lang : LanguageArea) = 
+            let history = state.Commit()
+            let for'each'case (case: And) =
+               case 
+               |> Parser''.Match tokens state lang
+               |> bye'with 
+                    [
+                    Unmatched => (fun it -> state.Reset(history))
+                    ]
+            
+            this.structure 
+            |> Seq.map for'each'case
+            |> Seq.tryFind (fun it -> it <> Unmatched)
+            |> fun some ->
+
+            match some with 
+            | None         -> Unmatched
+            | Some result  -> result
+
+                
+            
+            
 
 and Named(name: string, lang: LanguageArea, 
           (**whether to enter this parser.**)
-          when': (State -> bool) option,
+          when': When,
           (**To judge if current parser succeeds in parsing after context-free processsing.**)
-          with': (State -> AST -> bool) option) = 
-    
+          with': With) = 
+
     interface Parser with 
         member this.Name: string =  name
         member this.Match (tokens: Tokenizer array) (state: State) (lang : LanguageArea) = 
-        
-            if when' <..> false =??=> fun it -> it(state)
-            then result.unmatched
+            
+            if when'.Values |> Seq.forall (fun predicate -> predicate this state)
+            then Unmatched
             else
 
             match state.Find this with 
             | Finded begin' -> 
-                state.trace
-                    .GetSlice(begin', -1)
-                    |> result.findLR
-                
+                when'.["LR"] <- fun parser state -> parser &!= this
+                FindLR
             | _  ->
-                let ``or`` = lang.[this |> Parser''.ToName]
+                let ``or``  = lang.[this |> Parser''.ToName]
+                let history = state.Commit()
+                
+                ``or`` 
+                |> Parser''.Match tokens state lang
+                |> fun result ->
+                match result with 
+                | Matched(Nested astList) ->
+
+                    AST.Named(this |> Parser''.ToName, astList)
+                    |> fun result ->
+
+                    if with'.Values |> Seq.forall (fun predicate -> predicate this state result)
+                    then 
+                        result |> Matched 
+                    else 
+                        Unmatched
+
+                | Finished(Nested astList) ->
+                    AST.Named(this |> Parser''.ToName, astList)
+                    |> fun result ->
+
+                    if with'.Values |> Seq.forall (fun predicate -> predicate this state result)
+                    then 
+                        result |> Finished 
+                    else 
+                        Unmatched
+                
+                | Unmatched ->
+                        Unmatched
+                 
+                | FindLR 
+                | Finished _
+                | Matched  _ ->
+                        failwith "Impossible"
+                
+                |> bye'with 
+                    [
+                    Unmatched => (fun () -> state.Reset(history))
+                    ]
+                    
+                
+               
+            
+               
+                
 
                 
 
-                result.unmatched
+                
             
                 
                 

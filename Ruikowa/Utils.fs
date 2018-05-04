@@ -15,13 +15,15 @@ let Const'Cast (s: string) =
     
     | (true, r) -> r
 
-let inline (&=) a b  = obj.ReferenceEquals(a, b)
+let inline (&=) a b = obj.ReferenceEquals(a, b)
 
 let inline (&!=) a b = not (a &= b)
 
 let inline by'the'way(action: unit -> 'T): bool = 
     action() |> ignore
     true
+
+
 
 let inline SMonad (``do``: 'T -> 'G) (from: 'T option) =
     match from with 
@@ -38,36 +40,60 @@ let inline BMonad' (``do``: unit-> 'G) (from: bool) (default': 'G) =
     | false       -> default'
     | _           -> ``do``()
 
+let inline bye'with (action'Map: ('T * (unit -> unit)) List) (result: 'T)  = 
+    action'Map 
+    |> Seq.where (fun (it, _) -> it = result) 
+    |> Seq.tryHead 
+    |> SMonad (fun (_, it) -> it()) 
+    |> ignore
+    result
 
+type tuple =
+    
+    static member apply  (f1: 'T1 -> 'G, f2: 'T2 -> 'H) 
+                         (arg1: 'T1, arg2: 'T2) = 
+                         f1 arg1, f2 arg2
+
+    static member apply3 (f1: 'T1 -> 'G, f2: 'T2 -> 'H, f3: 'T3 -> 'R)
+                         (arg1: 'T1, arg2: 'T2, arg3: 'T3)  = 
+                          f1 arg1, f2 arg2, f3 arg3
+    
 
 let NotImplemented = NotImplementedException()
 
-let inline (<*>) (arg: 'T)   (f1: 'T -> 'G, f2: 'T -> 'H) = f1 arg, f2 arg
+let inline (<*>) (arg: 'T) (f1: 'T -> 'G, f2: 'T -> 'H) = f1 arg, f2 arg
+
+let inline (<**>) (arg: 'T) (f1: 'T -> 'G, f2: 'T -> 'H, f3: 'T -> 'R) = f1 arg, f2 arg, f3 arg
+
+
+let inline (=>)  (a: 'T) (b: 'G): 'T * 'G = a, b
     
-let inline (<..>)  (a: 'T) (b: 'G): 'T * 'G = a, b
-let inline (<...>) (a: 'T) (b: 'G) (c: 'R): 'T * 'G * 'R = a, b, c
+//let inline (<..>)  (a: 'T) (b: 'G): 'T * 'G = a, b
+//let inline (<...>) (a: 'T) (b: 'G) (c: 'R): 'T * 'G * 'R = a, b, c
 
-let inline (<=??=>) (arg: 'T option *  (unit ->'G)) (f: 'T -> 'G) =
-    match arg with 
-    | (None, default') ->  default'()
-    | (r,    _)        ->  f(r.Value)
+//let inline (<=??=>) (arg: 'T option *  (unit ->'G)) (f: 'T -> 'G) =
+//    match arg with 
+//    | (None, default') ->  default'()
+//    | (r,    _)        ->  f(r.Value)
 
-let inline (=??=>) (arg: 'T option *  ('G)) (f: 'T -> 'G) =
-    match arg with 
-    | (None, default') ->  default'
-    | (r,    _)        ->  f(r.Value)
+//let inline (=??=>) (arg: 'T option *  ('G)) (f: 'T -> 'G) =
+//    match arg with 
+//    | (None, default') ->  default'
+//    | (r,    _)        ->  f(r.Value)
 
-let inline (<=?=>) (arg: bool *  (unit ->'G)) (f: unit -> 'G) =
-    match arg with 
-    | (false, default') ->  default'()
-    | (_,    _)        ->   f()
+//let inline (<=?=>) (arg: bool *  (unit ->'G)) (f: unit -> 'G) =
+//    match arg with 
+//    | (false, default') ->  default'()
+//    | (_,    _)        ->   f()
 
-let inline (=?=>) (arg: bool * 'G) (f: unit -> 'G) =
-    match arg with 
-    | (false, default') ->  default'
-    | (_,    _)        ->   f()
+//let inline (=?=>) (arg: bool * 'G) (f: unit -> 'G) =
+//    match arg with 
+//    | (false, default') ->  default'
+//    | (_,    _)        ->   f()
 
 let inline get (any: 'T option) = any.Value
+
+
 
 
 

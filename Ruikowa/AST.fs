@@ -4,7 +4,7 @@ open Utils
 
 type AST = 
     | Single of Tokenizer 
-    | Named  of string * AST
+    | Named  of string * (AST CList)
     | Nested of AST CList
     | Nil 
     with 
