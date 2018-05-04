@@ -3,11 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp2.0</TargetFramework>
   </PropertyGroup>
-
-  <ItemGroup>
-    <EmbeddedResource Remove="EBNF\**" />
-  </ItemGroup>
-
+  
   <ItemGroup>
     <ProjectReference Include="..\Ruikowa.cs\Ruikowa.cs.csproj" />
   </ItemGroup>
@@ -20,16 +16,16 @@
     
     
     
-    <Compile Include="BNF\Tokenizer.fs" />
+    <Compile Include="Tokenizer.fs" />
     
     
     
-    <Compile Include="BNF\Utils.fs" />
+    <Compile Include="Utils.fs" />
     
-    <Compile Include="BNF\AST.fs" />
+    <Compile Include="AST.fs" />
 
-    <Compile Include="BNF\Result.fs" />
-    <Compile Include="BNF\Parser.fs" />
+    <Compile Include="Result.fs" />
+    <Compile Include="Parser.fs" />
     <Compile Include="Library.fs" />
   </ItemGroup>
 

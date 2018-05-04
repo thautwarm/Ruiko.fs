@@ -5,9 +5,14 @@ VisualStudioVersion = 15.0.27428.2002
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Ruiko", "Ruiko\Ruiko.csproj", "{A1453FA7-E99C-4AD7-9E3F-F3DA7CA93F97}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Ruikowa", "Ruikowa\Ruikowa.fsproj", "{CCBF0407-FA25-4F70-8E8D-7C60DAC4DAC5}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Ruikowa", "Ruikowa\Ruikowa.fsproj", "{CCBF0407-FA25-4F70-8E8D-7C60DAC4DAC5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ruikowa.cs", "Ruikowa.cs\Ruikowa.cs.csproj", "{D9063263-E818-4CB0-A16E-02E1DB6179EB}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Ruikowa.cs", "Ruikowa.cs\Ruikowa.cs.csproj", "{D9063263-E818-4CB0-A16E-02E1DB6179EB}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Ruiko.UnitTest", "Ruiko.UnitTest\Ruiko.UnitTest.fsproj", "{2D4BAD0D-38FF-4179-A22E-E96E3B92A8F0}"
+	ProjectSection(ProjectDependencies) = postProject
+		{CCBF0407-FA25-4F70-8E8D-7C60DAC4DAC5} = {CCBF0407-FA25-4F70-8E8D-7C60DAC4DAC5}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -27,6 +32,10 @@ Global
 		{D9063263-E818-4CB0-A16E-02E1DB6179EB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D9063263-E818-4CB0-A16E-02E1DB6179EB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D9063263-E818-4CB0-A16E-02E1DB6179EB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2D4BAD0D-38FF-4179-A22E-E96E3B92A8F0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2D4BAD0D-38FF-4179-A22E-E96E3B92A8F0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2D4BAD0D-38FF-4179-A22E-E96E3B92A8F0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2D4BAD0D-38FF-4179-A22E-E96E3B92A8F0}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

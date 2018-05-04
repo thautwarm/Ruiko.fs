@@ -13,6 +13,7 @@ type AST =
         | Single tk      -> tk.name
         | Named(name, _) -> name
         | Nested lst     -> lst |> Seq.map (fun it -> it.Name) |> String.concat " " |> sprintf "[%s]"
+        | Nil            -> failwith "Try to access the Name of Empty AST"
 
 type AST'Help = 
     static member take'nested (ast: AST) =

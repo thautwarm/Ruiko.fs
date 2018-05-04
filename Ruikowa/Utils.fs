@@ -9,10 +9,11 @@ let range = System.Linq.Enumerable.Range
 let ConstStrPool: CDict<string, string> = new CDict<string, string>()
 let Const'Cast (s: string) = 
     match ConstStrPool.TryGetValue s with
-    | (true, _) -> 
+    | (false, _) -> 
         ConstStrPool.Add(s, s)
         s
-    | (false, r) -> r
+    
+    | (true, r) -> r
 
 let inline (&=) a b  = obj.ReferenceEquals(a, b)
 

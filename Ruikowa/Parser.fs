@@ -5,6 +5,7 @@ open Utils
 open AST
 open Result
 open System
+open System.Text.RegularExpressions
 
 
 
@@ -18,7 +19,7 @@ type  State  = {
             this.trace.Reset trace'record
             this.context <- context'record
 
-type LanguageArea = CDict<string, Or>
+and LanguageArea = CDict<string, Or>
 
 and result = Result<Parser, AST>
 
@@ -31,15 +32,42 @@ and Parser'' =
     static member Match (tokens: Tokenizer array) (state: State) (lang : LanguageArea) (parser: Parser) =
         parser.Match tokens state lang
     
-    static member Optimized (ands: And array): And array = raise NotImplemented
+    static member Optimized (ands: And array): And array = ands
 
-
-
-and Literal = 
+and Literal'Core = 
+    | R      of Regex
+    | R'     of Regex
     
+    | N      of string // Name
+    | N'     of string 
+    
+    | L      of string // Runtime String 
+    | L'     of string
+
+    | C      of string // Const String
+    | C'     of string 
+
+and Literal(literal: Literal'Core) =
+    class 
+        let name =
+            match literal with 
+            | R  regex -> "R",  regex.ToString()
+            | R' regex -> "~R", regex.ToString()
+            | N  name  -> "N",  name
+            | N' name  -> "~N", name
+            | L  str   -> "L",  str
+            | L' str   -> "~L", str
+            | C  str   -> "C",  str 
+            | C' str   -> "~C", str
+            |> fun (prefix, str) -> sprintf "%s'%s'" prefix (str |> Const'Cast)
+        let core = literal
+        
+        member this.structure = core
+    end 
+
     interface Parser with 
         member this.Match (tokens: Tokenizer array) (state: State) (lang : LanguageArea) = raise (NotImplementedException())
-        member this.Name: string =  raise NotImplemented
+        member this.Name: string =  name
 
 and Atom'Core =
     | Lit     of Literal
@@ -62,7 +90,7 @@ and Atom(union: Atom'Core) =
                 ``or`` 
                  |> Parser''.ToName
                  |> fun it -> 
-                    let core = Seq(Or(``or``.core |> Parser''.Optimized), least, most)
+                    let core = Seq(Or(``or``.structure |> Parser''.Optimized), least, most)
                     match least, most with
                     | 1,  1  -> sprintf "(%s)"        it
                     | 0,  1  -> sprintf "[%s]"        it
@@ -74,7 +102,8 @@ and Atom(union: Atom'Core) =
             | Binding(as'name, atom) ->
                 atom |> Parser''.ToName |> fun it -> sprintf "%s as %s" it as'name 
                 |> fun it -> union, it
-            
+
+        member this.structure = core
     end
     interface Parser with 
         member this.Name: string =  name
@@ -83,12 +112,14 @@ and Atom(union: Atom'Core) =
 
 and And(atoms: Atom array) = 
     class 
-        member this.name      = atoms |> Seq.map Parser''.ToName |> String.concat " " |> Const'Cast
+        let (core, name) =
+            atoms <*> (id, Seq.map Parser''.ToName>> String.concat " " >> Const'Cast)
         member this.structure = atoms
     end 
     interface Parser with 
+        member this.Name: string = name
         member this.Match (tokens: Tokenizer array) (state: State) (lang : LanguageArea) = raise (NotImplementedException())
-        member this.Name: string =  raise NotImplemented
+        
         
 and Or(ands: And array) = 
     class
@@ -96,17 +127,19 @@ and Or(ands: And array) =
             ands 
             |> Parser''.Optimized
             |> fun core -> core <*> (id, Seq.map Parser''.ToName >> String.concat " | " >> Const'Cast)
+        member this.structure = core
     end
 
     interface Parser with 
-        member this.Name: string =  raise NotImplemented
+        member this.Name: string =  name
         member this.Match (tokens: Tokenizer array) (state: State) (lang : LanguageArea) = raise (NotImplementedException())
 
-and Named(name: string) = 
-    class 
-        member this.name = name
-    end 
+and Named(name: string, lang: LanguageArea, 
+          (**whether to enter this parser.**)
+          when': (State -> bool) option,
+          (**To judge if current parser succeeds in parsing after context-free processsing.**)
+          with': (State -> AST -> bool) option) = 
     interface Parser with 
-        member this.Name: string =  this.name
+        member this.Name: string =  name
         member this.Match (tokens: Tokenizer array) (state: State) (lang : LanguageArea) = raise (NotImplementedException()) 
     
