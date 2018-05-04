@@ -8,20 +8,27 @@ open System
 open System.Text.RegularExpressions
 
 
+let (|Finded|_|) (i: int) = 
+    if i <> -1
+    then Some(i)
+    else None
 
 
 type  State  = {
-    trace: string Trace
+    trace: Named Trace
     mutable context: Map<string, AST>
 }
     with member this.Commit() = this.trace.Commit(), this.context
          member this.Reset(trace'record, context'record): unit =
             this.trace.Reset trace'record
             this.context <- context'record
+         member this.Find(named: Named) = 
+            this.trace.FindSameObj named 
+
 
 and LanguageArea = CDict<string, Or>
 
-and result = Result<Parser, AST>
+and result = Result<Named, AST>
 
 and Parser = 
     abstract member Match: Tokenizer array -> State -> LanguageArea -> result
@@ -139,7 +146,28 @@ and Named(name: string, lang: LanguageArea,
           when': (State -> bool) option,
           (**To judge if current parser succeeds in parsing after context-free processsing.**)
           with': (State -> AST -> bool) option) = 
+    
     interface Parser with 
         member this.Name: string =  name
-        member this.Match (tokens: Tokenizer array) (state: State) (lang : LanguageArea) = raise (NotImplementedException()) 
+        member this.Match (tokens: Tokenizer array) (state: State) (lang : LanguageArea) = 
+        
+            if when' <..> false =??=> fun it -> it(state)
+            then result.unmatched
+            else
+
+            match state.Find this with 
+            | Finded begin' -> 
+                state.trace
+                    .GetSlice(begin', -1)
+                    |> result.findLR
+                
+            | _  ->
+                let ``or`` = lang.[this |> Parser''.ToName]
+
+                
+
+                result.unmatched
+            
+                
+                
     

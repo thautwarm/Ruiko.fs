@@ -35,10 +35,14 @@ namespace Ruikowa.CSharp
 
         public int Find(T e) => Current.Find(e);
 
+        public int FindSameObj(T e) => Current.FindSameObj(e);
+
+        public T[] GetSlice(int begin, int end) => Current.GetSlice(begin, end);
         public T Pop() => Current.Pop();
 
         public IEnumerator<T> GetEnumerator() => ((IEnumerable<T>)Current).GetEnumerator();
 
+        
         IEnumerator IEnumerable.GetEnumerator() => ((IEnumerable<T>)Current).GetEnumerator();
         #endregion
         #region version control
@@ -83,6 +87,22 @@ namespace Ruikowa.CSharp
             }
         }
 
+        public T[] GetSlice(int begin, int end)
+        {
+            if (end == -1)
+            {
+                end = _virtualLength;
+            }
+            var arr = new T[end - begin];
+
+            for(int i = begin; i < end; ++i)
+            {
+                arr[i] = _trace[i];
+            }
+            return arr;
+        }
+
+
         public int Length
         {
             get => _virtualLength;
@@ -90,12 +110,25 @@ namespace Ruikowa.CSharp
         }
 
         public int Mem => _trace.Count;
-        public int Find(T each)
+        public int Find(T it)
         {
             for (int i = 0; i < _virtualLength; ++i)
             {
                 var e = _trace[i];
-                if (e.Equals(each))
+                if (e.Equals(it))
+                {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+        public int FindSameObj(T it)
+        {
+            for (int i = 0; i < _virtualLength; ++i)
+            {
+                var e = _trace[i];
+                if (e == it)
                 {
                     return i;
                 }
