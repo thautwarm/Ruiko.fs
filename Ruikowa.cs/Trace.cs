@@ -48,7 +48,7 @@ namespace Ruikowa.CSharp
         #region version control
         public History Commit()
         {
-            return (Count, _trace[Count].Length);
+            return (Count, _trace[Count - 1].Length);
         }
 
         public void Reset(History history)

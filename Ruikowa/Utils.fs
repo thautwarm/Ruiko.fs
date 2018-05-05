@@ -68,7 +68,7 @@ let inline (<**>) (arg: 'T) (f1: 'T -> 'G, f2: 'T -> 'H, f3: 'T -> 'R) = f1 arg,
 
 let inline (=>)  (a: 'T) (b: 'G): 'T * 'G = a, b
     
-//let inline (<..>)  (a: 'T) (b: 'G): 'T * 'G = a, b
+let inline (<..>)  (a: 'T) (b: 'G): 'T * 'G = a, b
 //let inline (<...>) (a: 'T) (b: 'G) (c: 'R): 'T * 'G * 'R = a, b, c
 
 //let inline (<=??=>) (arg: 'T option *  (unit ->'G)) (f: 'T -> 'G) =
