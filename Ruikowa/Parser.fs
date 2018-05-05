@@ -9,10 +9,12 @@ open System.Text.RegularExpressions
 open System.Collections
 
 
+
 type State  = {
     trace: Named Trace
     mutable context  : Map<string, AST>
-    mutable LRParser : Named option
+    mutable lrParser : Named option
+    mutable useCustomStructure : bool
 }
     with member this.Commit() = this.trace.Commit(), this.context
          member this.Reset(trace'record, context'record): unit =
@@ -20,12 +22,12 @@ type State  = {
          member this.Contains(named: Named) = 
             this.trace.FindSameObj named |> (<>) -1
          static member New () = 
-            let new' = {trace = Trace(); context = Map[] ; LRParser = None}
+            let new' = {trace = Trace(); context = Map[] ; lrParser = None; useCustomStructure=false;}
             new'.trace.NewOne()
             new'
     
-and When = CDict<string, (Parser -> State -> bool)>
-and With = CDict<string, (Parser -> State -> AST -> bool)>
+and When = CDict<string, (State -> bool)>
+and With = CDict<string, (State -> AST -> bool)>
 and LanguageArea = CDict<string, Or>
 
 and Result = 
@@ -44,32 +46,28 @@ and Parser'' =
     
     static member Optimized (ands: And list): And list = ands //TODO
 
-and Literal'Core = 
-    | R      of Regex
-    | R'     of Regex
-    
-    | N      of string // Name
-    | N'     of string 
-    
-    | L      of string // Runtime String 
-    | L'     of string
 
-    | C      of string // Const String
-    | C'     of string 
 
 and Literal(literal: Literal'Core) =
     class 
         let name =
             match literal with 
-            | R  regex -> "R",  regex.ToString()
-            | R' regex -> "~R", regex.ToString()
-            | N  name  -> "N",  name
-            | N' name  -> "~N", name
-            | L  str   -> "L",  str
-            | L' str   -> "~L", str
-            | C  str   -> "C",  str 
-            | C' str   -> "~C", str
-            |> fun (prefix, str) -> sprintf "%s'%s'" prefix (str |> Const'Cast)
+            | R  regex        -> "R",  regex.ToString()
+            | R' regex        -> "~R", regex.ToString()
+            | N  name         -> "N",  name
+            | N' name         -> "~N", name
+            | L  str          -> "L",  str
+            | L' str          -> "~L", str
+            | C  str          -> "C",  str 
+            | C' str          -> "~C", str
+            | NC(name, value) -> sprintf "<%s>" name, value
+            | Fn f            -> "", f.ToString() |> sprintf "@%s"
+            |> function
+                | ("",  fnName) -> fnName |> Const'Cast
+                | (prefix, str) -> 
+                    sprintf "%s'%s'" prefix (str |> Const'Cast)
+
+
         let core = literal
         
         member this.structure = core
@@ -83,22 +81,26 @@ and Literal(literal: Literal'Core) =
             else 
             let token = tokens.[idx]
             match this.structure with
-            | R regex ->
+            | R regex               ->
                 (regex.Match token.value).Success
-            | R' regex ->
+            | R' regex              ->
                 not (regex.Match token.value).Success
-            | N name   ->
+            | N name                ->
                 name &= token.name 
-            | N' name  ->
+            | N' name               ->
                 name &!= token.name
-            | L runtime'str ->
+            | L runtime'str         ->
                 runtime'str = token.value
-            | L' runtime'str ->
+            | L' runtime'str        ->
                 runtime'str <> token.value
-            | C const'str ->
+            | C const'str           ->
                 const'str &= token.value
-            | C' const'str ->
+            | C' const'str          ->
                 const'str &!= token.value
+            | NC(name, const'str)   ->
+                name &= token.name && const'str &= token.value
+            | Fn predicate          ->
+                predicate(token)
             |>
             function 
              | true -> 
@@ -253,10 +255,10 @@ and And(atoms: Atom list) =
                             | Unmatched -> Unmatched
                             | Matched (Nested astList) ->
                                 parsed'.AddRange astList 
-                                for'each parsed xs
+                                for'each parsed' xs
                             | Matched ast ->
                                 parsed'.Add ast
-                                for'each parsed xs 
+                                for'each parsed' xs 
                             | _ -> failwith "Impossible"
                         |> FindLR
                          
@@ -305,7 +307,9 @@ and Named(name: string,
           (**To judge if current parser succeeds in parsing after context-free processsing.**)
           with': With,
 
-          lang: LanguageArea) = 
+          lang: LanguageArea,
+
+          restructured: (State -> AST) option) = 
     
     let s_name = name |> Const'Cast
 
@@ -314,14 +318,14 @@ and Named(name: string,
         member this.Match (tokens: Tokenizer array) (state: State) (lang : LanguageArea) = 
             let rec s_match (tokens: Tokenizer array) (state: State) (lang : LanguageArea) = 
 
-                if (state.LRParser.IsSome && state.LRParser.Value &= this) 
-                    || when'.Values |> Seq.exists (fun predicate -> not <| predicate this state)
+                if (state.lrParser.IsSome && state.lrParser.Value &= this) 
+                    || when'.Values |> Seq.exists (fun predicate -> not <| predicate state)
                 then Unmatched
                 else
 
                 if state.Contains this 
                 then 
-                    state.LRParser <- Some(this)
+                    state.lrParser <- Some(this)
                     FindLR (fun it -> Matched it)
                 else
                 state.trace.Add this
@@ -329,6 +333,9 @@ and Named(name: string,
                 let ``or``  = lang.[this |> Parser''.ToName]
                 let history = state.Commit()
                 let context = state.context
+                let is'custom = state.useCustomStructure
+
+                state.useCustomStructure <- restructured.IsSome
                 
                 ``or`` 
                 |> Parser''.Match tokens state lang
@@ -342,7 +349,7 @@ and Named(name: string,
                     AST.Named(this |> Parser''.ToName, astList)
 
                     |> fun result ->
-                    if with'.Values |> Seq.exists (fun predicate -> not <| predicate this state result)
+                    if with'.Values |> Seq.exists (fun predicate -> not <| predicate state result)
                     then 
                         Unmatched
                     else 
@@ -362,7 +369,7 @@ and Named(name: string,
                             |> Matched
                         | _     -> failwith "Impossible"
 
-                    if state.LRParser &!= this 
+                    if state.lrParser.Value &!= this 
                     then 
                         FindLR stacked'
                     else 
@@ -384,21 +391,32 @@ and Named(name: string,
                         | _            -> 
                             failwith "Impossible"
                     
-                    state.LRParser <- None
+                    state.lrParser <- None
                     final'
 
                  | _ 
                     -> failwith "Impossible"
-            
                 
+                 
                  |> fun return' -> 
-
-                 state.context <- context
-
-                 match return' with 
-                 | Unmatched -> state.Reset history
-                 | _         -> ()
-                 return'
+                     match return' with 
+                     | Unmatched -> 
+                        state.Reset history 
+                        Unmatched
+                     | _         -> 
+                        if state.useCustomStructure then
+                            restructured.Value(state) |> Matched 
+                        else 
+                            return'
+                 |> fun return' ->
+                     state.context <- context
+                     state.useCustomStructure <- is'custom
+                     return'
+                    
+                    
+                    
+                     
+                 
             
             s_match tokens state lang
                 

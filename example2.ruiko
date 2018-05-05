@@ -23,8 +23,7 @@ mytoken ->
     # multi-cases
     | R'<regex>'
     | '<lteral>'
-    | ~R'<regex
-    >'
+    | ~R'<regex>'
     | ~'<literal>'
 
     cast # cast token nizer
