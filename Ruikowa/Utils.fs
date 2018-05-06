@@ -4,6 +4,7 @@ open System
 
 type 'a CList = 'a System.Collections.Generic.List
 type CDict<'k, 'v> = System.Collections.Generic.Dictionary<'k, 'v>
+        
 
 let range = System.Linq.Enumerable.Range
 let ConstStrPool: CDict<string, string> = new CDict<string, string>()
@@ -60,6 +61,8 @@ type tuple =
     
 
 let NotImplemented = NotImplementedException()
+
+let inline (</>) (arg: 'T list) (f: 'T -> 'G) = List.map f arg  
 
 let inline (<*>) (arg: 'T) (f1: 'T -> 'G, f2: 'T -> 'H) = f1 arg, f2 arg
 

@@ -14,21 +14,34 @@ let inline (&=) (a: 'T) (b: 'G)  = obj.ReferenceEquals(a, b)
 [<EntryPoint>]
 let main argv =
 
+    let L1 = Literal(ValueStr"a")
+    let L2 = Literal(RegExp(Regex "\G\d"))
+    let L3 = Literal(RegExp(Regex "\G[A-Z]"))
 
-    let m_str = "
-    I am the bone of my sword
-    "
+    let and1 = And([Atom <| ``Literal Atom`` L1; Atom <| ``Literal Atom`` L2 ])
+    let and2 = And([Atom <| ``Literal Atom`` L1; Atom <| ``Literal Atom`` L3 ])
 
-    let name_lexer = Lexer([R(Regex "\G[a-zA-Z_]{1}[a-zA-Z0-9_]*")])
-    let space_lexer = Lexer([R(Regex "\G\s")])
-    let TokenTable = [("Name",  name_lexer.lex);
-                      ("Space", space_lexer.lex)]
-                      |> List.map (fun (a, b) -> a|> Const'Cast, b)
+    let Or' = Or([and2; and1])
+
+    printfn "%s  %d" (Or' |> Parser.name) (Or'.structure.Length)
+
+    0
     
-    for e in Lexing (Map[]) TokenTable m_str "test" do
-        printfn "%s" (e.ToString()) 
+    
 
-    //let L1 = Literal(L"a")
+    //let m_str = "
+    //I am the bone of my sword
+    //"
+
+    //let name_lexer = Lexer([RegExp(Regex "\G[a-zA-Z_]{1}[a-zA-Z0-9_]*")])
+    //let space_lexer = Lexer([RegExp(Regex "\G\s")])
+    //let TokenTable = [("Name",  name_lexer.lex);
+    //                  ("Space", space_lexer.lex)]
+    //                  |> List.map (fun (a, b) -> a|> Const'Cast, b)
+    
+    //let tokens = Lexing (Map[]) TokenTable m_str "test"
+    
+
 
     //let L2 = Literal(L"b")
 

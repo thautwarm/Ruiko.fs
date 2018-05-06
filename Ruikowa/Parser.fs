@@ -35,33 +35,92 @@ and Result =
     | Matched of AST
     | FindLR  of (AST -> Result)
 
-and Parser = 
+and parser = 
     abstract member Match: Tokenizer array -> State -> LanguageArea -> Result
     abstract member Name: string
 
-and Parser'' =  
-    static member ToName (parser: Parser) = parser.Name
-    static member Match (tokens: Tokenizer array) (state: State) (lang : LanguageArea) (parser: Parser) =
-        parser.Match tokens state lang
+
+and Parser =  
+    static member name (parser': parser) = parser'.Name
+    static member match' (tokens: Tokenizer array) (state: State) (lang : LanguageArea) (parser': parser) =
+        parser'.Match tokens state lang
     
-    static member Optimized (ands: And list): And list = ands //TODO
+
+        
+    static member optimize'branches (ands: And list): And list =
+        let rec inner (ands: And list): And list = 
+            
+            ands 
+            |> List.groupBy (fun it -> it.structure |> List.head |> Parser.name)
+            |> fun it ->
+              
+              if it |> Seq.map (snd >> List.length) |> Seq.forall ((=) 1) 
+              then ands
+              else 
+              let rec process' (ret: And list) (from: (string * And list) list)=
+                match from with 
+                | []               -> ret |> List.rev
+                | (_, atoms) :: xs -> 
+                    if atoms |> List.length |> (=) 1 
+                    then 
+                        atoms.[0]
+                    else 
+                        let strucures     = atoms     |> List.map (fun it -> it.structure)
+                        let head          = strucures |> List.head |> List.head;
+                        let tails         = strucures |> List.map List.tail
+                        let opt, others   = tails     |> List.partition (List.length >> ((=) 0))
+
+                        match others |> List.length with 
+                        | 0 ->
+                            And [head]
+                        | _ ->
+                            let sndloc = 
+                                        others 
+                                        |> List.map And 
+                                        |> inner
+                                        |> Or 
+                                        |> ``Branch Atom`` |> Atom
+                                
+                
+                            if List.length opt |> ((=) 0)
+                            then 
+                                And [head; sndloc]
+                            else 
+                                And [head; ``SubSequence Atom``(sndloc, 0, 1) |> Atom]
+                    |>
+                    function 
+                    | res ->
+                        process' (res :: ret) xs
+                     
+              process' [] it
+        inner ands
+                        
+    static member optimise (or': Or): Or =
+        
+        let optimized = or'.structure |> Parser.optimize'branches
+        if optimized &= or'.structure 
+        then 
+            or'
+        else 
+            Or(optimized)
 
 
 
-and Literal(literal: Literal'Core) =
+
+and Literal(literal: ``Literal Spec``) =
     class 
         let name =
             match literal with 
-            | R  regex        -> "R",  regex.ToString()
-            | R' regex        -> "~R", regex.ToString()
-            | N  name         -> "N",  name
-            | N' name         -> "~N", name
-            | L  str          -> "L",  str
-            | L' str          -> "~L", str
-            | C  str          -> "C",  str 
-            | C' str          -> "~C", str
-            | NC(name, value) -> sprintf "<%s>" name, value
-            | Fn f            -> "", f.ToString() |> sprintf "@%s"
+            | RegExp  regex                   -> "R",  regex.ToString()
+            | ``Not RegExp`` regex            -> "~R", regex.ToString()
+            | Name  name                      -> "N",  name
+            | ``Not Name`` name               -> "~N", name
+            | ValueStr  str                   -> "L",  str
+            | ``Not ValueStr`` str            -> "~L", str
+            | ConstStr  str                   -> "C",  str 
+            | ``Not ConstStr`` str            -> "~C", str
+            | ``Name and Value``(name, value) -> sprintf "<%s>" name, value
+            | ``Func Predicate`` f            -> "", f.ToString() |> sprintf "@%s"
             |> function
                 | ("",  fnName) -> fnName |> Const'Cast
                 | (prefix, str) -> 
@@ -73,7 +132,7 @@ and Literal(literal: Literal'Core) =
         member this.structure = core
     end 
 
-    interface Parser with 
+    interface parser with 
         member this.Name: string =  name
         member this.Match (tokens: Tokenizer array) (state: State) (lang : LanguageArea) = 
             let idx = state.trace.Count - 1
@@ -81,25 +140,25 @@ and Literal(literal: Literal'Core) =
             else 
             let token = tokens.[idx]
             match this.structure with
-            | R regex               ->
+            | RegExp regex               ->
                 (regex.Match token.value).Success
-            | R' regex              ->
+            | ``Not RegExp`` regex              ->
                 not (regex.Match token.value).Success
-            | N name                ->
+            | Name name                ->
                 name &= token.name 
-            | N' name               ->
+            | ``Not Name`` name               ->
                 name &!= token.name
-            | L runtime'str         ->
+            | ValueStr runtime'str         ->
                 runtime'str = token.value
-            | L' runtime'str        ->
+            | ``Not ValueStr`` runtime'str        ->
                 runtime'str <> token.value
-            | C const'str           ->
+            | ConstStr const'str           ->
                 const'str &= token.value
-            | C' const'str          ->
+            | ``Not ConstStr`` const'str          ->
                 const'str &!= token.value
-            | NC(name, const'str)   ->
+            | ``Name and Value``(name, const'str)   ->
                 name &= token.name && const'str &= token.value
-            | Fn predicate          ->
+            | ``Func Predicate`` predicate          ->
                 predicate(token)
             |>
             function 
@@ -112,62 +171,78 @@ and Literal(literal: Literal'Core) =
            
             
 
-and Atom'Core =
-    | Lit     of Literal
-    | Seq     of Or * int * int
-    | Named   of Named
-    | Binding of string * Atom
+and ``Atom Spec`` =
+    | ``Literal Atom``         of Literal
+    | ``SubSequence Atom``     of Atom * int * int
+    | ``Branch Atom``          of Or
+    | ``Named Atom``           of Named
+    | ``Name Binding Atom``    of string * Atom
 
-and Atom(union: Atom'Core) =
+and Atom(union: ``Atom Spec``) =
     class 
         // binding local var
         let (core, name) =
             match union with 
-            | Lit lit                   -> 
+            | ``Literal Atom`` lit                   -> 
                 lit 
-                |> Parser''.ToName
+                |> Parser.name
                 |> fun it -> union, it
-            | Named   named             -> 
+            | ``Named Atom``   named             -> 
                 named 
-                |> Parser''.ToName
+                |> Parser.name
                 |> fun it -> union, it
-            | Seq (``or``, least, most) ->
-                ``or`` 
-                 |> Parser''.ToName
-                 |> fun it -> 
-                    let core = Seq(Or(``or``.structure |> Parser''.Optimized), least, most)
-                    match least, most with
-                    | 1,  1  -> sprintf "(%s)"        it
-                    | 0,  1  -> sprintf "[%s]"        it
-                    | 0, -1  -> sprintf "(%s)*"       it
-                    | 1, -1  -> sprintf "(%s)+"       it
-                    | _, -1  -> sprintf "(%s){%d}"    it least 
-                    | _      -> sprintf "(%s){%d %d}" it least most
-                    |> Const'Cast
-                    |> fun it -> (core, it)
-            | Binding(as'name, atom) ->
-                atom |> Parser''.ToName |> fun it -> sprintf "%s as %s" it as'name 
+
+            | ``Branch Atom`` branch ->
+                // refactor for optimise
+                let branch' = branch|> Parser.optimise 
+                branch' |> ``Branch Atom`` , branch' |> Parser.name |> sprintf "(%s)"
+
+            | ``SubSequence Atom`` (atom, least, most) ->
+                 let name = atom |> Parser.name
+                 match least, most with 
+                 | 1, 1 -> 
+                    atom.structure, name 
+                 | 0, 1 ->
+                    union, sprintf "%s?" (name)
+                
+                 | 0, -1 ->
+                    union, sprintf "%s*" (name)
+                  
+                 | 1, -1 ->
+                    union, sprintf "%s+" (name)
+                 | _, -1 ->
+                    union, sprintf "%s{%d}" name least 
+                 | _     -> union, sprintf "%s{%d %d}" name least most
+                 
+                 |> tuple.apply (id, Const'Cast)
+
+                 
+            | ``Name Binding Atom``(as'name, atom) ->
+                atom |> Parser.name |> fun it -> sprintf "%s as %s" it as'name 
                 |> Const'Cast
                 |> fun it -> union, it
 
         member this.structure = core
     end
 
-    interface Parser with 
+    interface parser with 
         member this.Name: string =  name
         member this.Match (tokens: Tokenizer array) (state: State) (lang : LanguageArea) = 
             match this.structure with 
-            | Lit lit 
+            | ``Literal Atom`` lit 
                 ->
-                lit |> Parser''.Match tokens state lang
+                lit |> Parser.match' tokens state lang
             
-            | Named named 
+            | ``Named Atom`` named 
                 ->
-                named |> Parser''.Match tokens state lang 
+                named |> Parser.match' tokens state lang 
+            
+            | ``Branch Atom`` branch ->
+                branch |> Parser.match' tokens state lang
 
-            | Binding(name, atom) 
+            | ``Name Binding Atom``(name, atom) 
                 ->
-                atom |> Parser''.Match tokens state lang
+                atom |> Parser.match' tokens state lang
                 |> function
                 | Unmatched      
                     -> Unmatched
@@ -181,21 +256,24 @@ and Atom(union: Atom'Core) =
                         Matched ast
                     |> FindLR
 
-            | Seq(``or``, least, most) 
+            | ``SubSequence Atom``(atom, least, most) 
                 ->
                 let history = state.Commit()
 
                 let rec repeat'(parsed: AST CList) (i: int) = 
-                    if i = most then if i < least then Unmatched else Matched (Nested parsed)
+                    if i = most then Matched (Nested parsed)
                     else 
-                    ``or``
-                    |> Parser''.Match tokens state lang 
+                    atom
+                    |> Parser.match' tokens state lang 
                     |>
+
                     function 
                      | Unmatched 
                         -> 
                         state.Reset history
-                        Unmatched
+                        if i < least then Unmatched
+                        else Matched (Nested parsed)
+
                      | Matched(Nested astList) 
                         ->
                         parsed.AddRange astList
@@ -224,10 +302,10 @@ and Atom(union: Atom'Core) =
 and And(atoms: Atom list) = 
     class 
         let (core, name) =
-            atoms <*> (id, Seq.map Parser''.ToName>> String.concat " " >> Const'Cast)
+            atoms <*> (id, Seq.map Parser.name>> String.concat " " >> Const'Cast)
         member this.structure = atoms
     end 
-    interface Parser with 
+    interface parser with 
         member this.Name: string = name
         member this.Match (tokens: Tokenizer array) (state: State) (lang : LanguageArea) = 
            let history = state.Commit()
@@ -236,7 +314,7 @@ and And(atoms: Atom list) =
                 | []    -> parsed |> Nested |> Matched
                 | x::xs ->
                     x
-                    |> Parser''.Match tokens state lang 
+                    |> Parser.match' tokens state lang 
                     |> 
                     function 
                     | Unmatched   -> 
@@ -270,12 +348,12 @@ and Or(ands: And list) =
     class
         let (core, name) = 
             ands 
-            |> Parser''.Optimized
-            |> fun core -> core <*> (id, Seq.map Parser''.ToName >> String.concat " | " >> Const'Cast)
+            |> Parser.optimize'branches
+            |> fun core -> core <*> (id, Seq.map Parser.name >> String.concat " | " >> Const'Cast)
         member this.structure = core
     end
 
-    interface Parser with 
+    interface parser with 
         member this.Name: string =  name
         member this.Match (tokens: Tokenizer array) (state: State) (lang : LanguageArea) = 
             let rec m_match (tokens: Tokenizer array) (state: State) (lang : LanguageArea) = 
@@ -286,7 +364,7 @@ and Or(ands: And list) =
                     | []    -> Unmatched
                     | x::xs ->
                         x 
-                        |> Parser''.Match tokens state lang 
+                        |> Parser.match' tokens state lang 
                         |> 
                         function 
                         | Unmatched -> 
@@ -311,9 +389,10 @@ and Named(name: string,
 
           restructured: (State -> AST) option) = 
     
+    
     let s_name = name |> Const'Cast
 
-    interface Parser with 
+    interface parser with 
         member this.Name: string =  s_name
         member this.Match (tokens: Tokenizer array) (state: State) (lang : LanguageArea) = 
             let rec s_match (tokens: Tokenizer array) (state: State) (lang : LanguageArea) = 
@@ -330,7 +409,7 @@ and Named(name: string,
                 else
                 state.trace.Add this
 
-                let ``or``  = lang.[this |> Parser''.ToName]
+                let ``or``  = lang.[this |> Parser.name]
                 let history = state.Commit()
                 let context = state.context
                 let is'custom = state.useCustomStructure
@@ -338,7 +417,7 @@ and Named(name: string,
                 state.useCustomStructure <- restructured.IsSome
                 
                 ``or`` 
-                |> Parser''.Match tokens state lang
+                |> Parser.match' tokens state lang
                 |> 
                 function 
                  | Unmatched               
@@ -346,7 +425,7 @@ and Named(name: string,
 
                  | Matched(Nested astList) 
                     ->
-                    AST.Named(this |> Parser''.ToName, astList)
+                    AST.Node(this |> Parser.name, astList)
 
                     |> fun result ->
                     if with'.Values |> Seq.exists (fun predicate -> not <| predicate state result)
@@ -363,9 +442,9 @@ and Named(name: string,
                         match stacked ast with 
                         | Unmatched -> Unmatched
                         | Matched(Nested astList) ->
-                            this |> Parser''.ToName 
+                            this |> Parser.name 
                             <..> astList
-                            |> AST.Named
+                            |> AST.Node
                             |> Matched
                         | _     -> failwith "Impossible"
 
@@ -375,7 +454,7 @@ and Named(name: string,
                     else 
 
                     let final' = 
-                        match ``or`` |> Parser''.Match tokens state lang with 
+                        match ``or`` |> Parser.match' tokens state lang with 
                         | Unmatched    -> Unmatched
                         | Matched head ->
 

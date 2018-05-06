@@ -16,19 +16,22 @@ let inline (&=) (a: 'T) (b: 'G)  = obj.ReferenceEquals(a, b)
 let ``Name Test`` () =
 
 
-    let L1 = Literal(L"a")
+    let L1 = Literal(ValueStr"a")
 
-    let L2 = Literal(R(Regex "\d"))
+    let L2 = Literal(RegExp(Regex "\G\d"))
 
-    let And = And([Atom <| Lit L1; Atom <| Lit L2 ])
+    let L3 = Literal(RegExp(Regex "\G[a-z]{1}"))
 
-    Assert.Equal(And |> Parser''.ToName |> string, "L'a' R'\d'");
+    let and1 = And([Atom <| ``Literal Atom`` L1; Atom <| ``Literal Atom`` L2 ])
 
-    let Or = Or([And; And]);
+    let and2 = And([Atom <| ``Literal Atom`` L1; Atom <| ``Literal Atom`` L3 ])
+
+    Assert.Equal(and1 |> Parser.name |> string, "L'a' R'\G\d'");
+
+    let Or = Or([and1; and2]);
 
 
-
-    Assert.Equal(Or |> Parser''.ToName |> string, "L'a' R'\d' | L'a' R'\d'");
+    Assert.Equal("L'a' (R'\G\d' | R'\G[a-z]{1}')", Or |> Parser.name |> string);
 
     let lang = LanguageArea()
     lang.Add ("X", Or)
@@ -37,7 +40,7 @@ let ``Name Test`` () =
     let tokens = [|{name="const"; value="a"; colno=1; lineno=0; filename=""};{name="const"; value="5"; colno=2; lineno=0; filename = ""}|]
 
     let state = State.New()
-    let ast = X |> Parser''.Match tokens state lang
+    let ast = X |> Parser.match' tokens state lang
     File.AppendAllText("./log", ast.ToString())
     0
 
@@ -48,13 +51,27 @@ let ``tokenizer test``() =
     I am the bone of my sword
     "
 
-    let name_lexer = Lexer([R(Regex "\G[a-zA-Z_]{1}[a-zA-Z0-9_]*")])
+    let name_lexer = Lexer([RegExp(Regex "\G[a-zA-Z_]{1}[a-zA-Z0-9_]*")])
    
-    let space_lexer = Lexer([R(Regex "\G\s")])
+    let space_lexer = Lexer([RegExp(Regex "\G\s")])
     let TokenTable = [("Name",  name_lexer.lex);
                       ("Space", space_lexer.lex)]
                       |> List.map (fun (a, b) -> a|> Const'Cast, b)
     Lexing (Map[]) TokenTable m_str "test"
-    |> List.ofSeq
+    |> Array.ofSeq
     |> fun it ->  File.AppendAllText("./log", it.ToString())
     0
+
+[<Fact>]
+let ``optimization test``() =
+    let L1 = Literal(ValueStr"a")
+    let L2 = Literal(RegExp(Regex "\G\d"))
+    let L3 = Literal(RegExp(Regex "\G[A-Z]"))
+
+    let and1 = And([Atom <| ``Literal Atom`` L1; Atom <| ``Literal Atom`` L2 ])
+    let and2 = And([Atom <| ``Literal Atom`` L1; Atom <| ``Literal Atom`` L3 ])
+
+    let Or' = Or [and2; and1] |> Parser.optimise
+    Assert.Equal(1, Or'.structure |> List.length)
+
+    

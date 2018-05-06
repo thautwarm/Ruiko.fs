@@ -14,45 +14,45 @@ type Tokenizer = {
 }
     
 
-type Literal'Core = 
-    | R      of Regex
-    | R'     of Regex
+type ``Literal Spec`` = 
+    | RegExp               of Regex
+    | ``Not RegExp``       of Regex
     
-    | N      of string // Name
-    | N'     of string
+    | Name                of string // Name
+    | ``Not Name``        of string
     
     
-    | L      of string // Runtime String 
-    | L'     of string
+    | ValueStr            of string // Runtime String 
+    | ``Not ValueStr``    of string
 
-    | C      of string // Const String
-    | C'     of string 
-
-
-    | NC     of string * string
-    | Fn     of (Tokenizer -> bool)
+    | ConstStr            of string // Const String
+    | ``Not ConstStr``    of string 
 
 
+    | ``Name and Value``  of string * string
+    | ``Func Predicate``  of (Tokenizer -> bool)
 
 
-type Lexer = Lexer of Literal'Core list
+
+
+type Lexer = Lexer of ``Literal Spec`` list
     with 
         member this.lex (raw: string) (pos: int): string option = 
-            let rec processing': Literal'Core list -> string option =
+            let rec processing': ``Literal Spec`` list -> string option =
                 function
                 | []     -> None
                 | x::xs  -> 
                     match x with
-                    | R  regex
-                    | R' regex ->
+                    | RegExp  regex
+                    | ``Not RegExp`` regex ->
                         let r = regex.Match(raw, pos)
                         if r.Success then r.Value |> Some
                         else processing' xs
                 
-                    | C  literal 
-                    | C' literal
-                    | L  literal 
-                    | L' literal ->
+                    | ConstStr  literal 
+                    | ``Not ConstStr`` literal
+                    | ValueStr  literal 
+                    | ``Not ValueStr`` literal ->
                         if StrUtils.StartsWithAt(raw, literal, pos)
                         then literal |> Some
                         else processing' xs
@@ -64,13 +64,6 @@ type Lexer = Lexer of Literal'Core list
             | Lexer lst ->
                 processing' lst
  
-                    
-                
-
-
-            
-        
-   
    
 let Lexing (castMap: Map<string, string>) // the values of castMap must be const strings in Utils.ConstStrPool.
            (tokenTable: ((string * (string -> int -> string option)) list)) 
@@ -98,17 +91,19 @@ let Lexing (castMap: Map<string, string>) // the values of castMap must be const
             if n  = pos' then ()
             else yield! processing' (lineno', colno', pos') tokenTable
             
-            
-               
-
         | (name, x) :: xs ->
             
             match x raw pos with 
             | None   -> 
                 yield! (processing' (lineno, colno, pos) xs) 
-            | Some r -> 
-                yield {value = r; name=name; colno = colno; lineno = lineno; filename=filename}
-             
+            | Some r ->
+                
+                match castMap.TryFind r with
+                | None ->
+                    yield {value = r; name=name; colno = colno; lineno = lineno; filename=filename}
+                | Some casted'name ->
+                    yield {value = r |> Const'Cast; name = casted'name; colno = colno; lineno = lineno; filename = filename}
+
                 let row_inc = r |> Seq.where (fun it -> it = '\n') |> Seq.length
                 let inc = r.Length
 
