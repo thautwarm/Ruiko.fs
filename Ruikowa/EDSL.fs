@@ -4,6 +4,8 @@ open Parser
 open AST 
 open Tokenizer
 open Utils
+open System.Linq
+open System.Text.RegularExpressions
 
 type Term = 
     | R   of string
@@ -18,9 +20,11 @@ type Term =
     | C   of string
     | C'  of string
 
-    | NC  of string * string
+    | NC     of string * string
 
-    | Fn  of (Tokenizer -> bool)
+    | Fn     of (Tokenizer -> bool)
+
+    | ``P|`` of (Term list) 
 
     | Seq of Term * int * int
 
@@ -35,20 +39,20 @@ type Term =
         member this.(*)  = Seq(this, 0, -1)
         member this.(=>) (name: string) = As(this, name)
    
+type NamedParserCollection = CDict<string, Named>
+
 
 type Def(name: string, lexer: Lexer CList, lang: LanguageArea) =
-    let s_name = name
     let mutable _restructure : (State -> AST) option = None
     let mutable _definition: Term list list =  []
     let mutable ``generated?`` = false
+    let mutable _parser : Named option = None
 
     let _when   = When()
     let _with   = With()
     let _lexer  = lexer
-    let _lang   = lang
-    
-    
 
+    
     
     with
 
@@ -67,8 +71,7 @@ type Def(name: string, lexer: Lexer CList, lang: LanguageArea) =
             with  get ()    = _with
 
         
-        member this.ToParser () = 
-            raise NotImplemented
+
 
         static member By (def': Term list list) (subject: Def) = 
             subject.definition <- def'
@@ -92,15 +95,118 @@ type Def(name: string, lexer: Lexer CList, lang: LanguageArea) =
             subject.restructure <- Some(fn)
             subject
         
+        
+        member this.ToParser () = 
+            if ``generated?`` 
+            then 
+                _parser.Value
+            else 
+            _parser <- Named("name", _when, _with, lang, _restructure) |> Some
+
+            let rec for'each'atom (ret: Atom list) (cases: Term list) = 
+                match cases with 
+                | [] -> ret |> (List.rev >> And)
+                | x :: xs -> 
+                    match x with 
+                    | R str         ->
+                        Regex ("\G"+str) |> RegExp |> Literal |> ``Literal Atom``
+                    | R' str        ->
+                        Regex ("\G"+str) |> ``Not RegExp`` |> Literal |> ``Literal Atom``
+                    | N name        ->
+                        name             |> Name |> Literal |> ``Literal Atom``
+                    | N' name       ->
+                        name             |> ``Not Name`` |> Literal |> ``Literal Atom``
+                    | V  str        ->
+                        str              |> ValueStr |> Literal |> ``Literal Atom``
+                    | V' str        ->
+                        str              |> ``Not ValueStr`` |> Literal |> ``Literal Atom``
+                    | C str         ->
+                        str              |> Const'Cast |> ConstStr |> Literal |> ``Literal Atom``
+                    | C' str        ->
+                        str              |> Const'Cast |> ConstStr |> Literal |> ``Literal Atom``
+                    | NC(name, str) ->
+                        (name |> Const'Cast, str |> Const'Cast)
+                        |> ``Name and ConstStr`` |>  Literal |> ``Literal Atom``
+                    | Fn(fn) ->
+                        fn |> ``Func Predicate`` |> Literal |> ``Literal Atom``
+                    | Seq(term, least, most) ->
+                        raise NotImplemented
+
+                    
+                    |> Atom
+                    |> 
+                    function 
+                    | atom -> for'each'atom (atom::ret) xs 
+
+                
+            let rec for'each'and (ret: And list) (cases: Term list list) = 
+                match cases with
+                | []     -> ret |> List.rev
+
+                | x :: xs ->
+                    
+                    for'each'and (for'each'atom [] x::ret) xs 
+               
+
+
+            
+            raise NotImplemented
 
 
 
 
         
+ 
+let rec ``Term -> Atom`` (definitions: NamedParserCollection) (x: Term) = 
+    match x with 
+    | R str         ->
+        Regex ("\G"+str) |> RegExp |> Literal |> ``Literal Atom``
+    | R' str        ->
+        Regex ("\G"+str) |> ``Not RegExp`` |> Literal |> ``Literal Atom``
+    | N name        ->
+        name             |> Name |> Literal |> ``Literal Atom``
+    | N' name       ->
+        name             |> ``Not Name`` |> Literal |> ``Literal Atom``
+    | V  str        ->
+        str              |> ValueStr |> Literal |> ``Literal Atom``
+    | V' str        ->
+        str              |> ``Not ValueStr`` |> Literal |> ``Literal Atom``
+    | C str         ->
+        str              |> Const'Cast |> ConstStr |> Literal |> ``Literal Atom``
+    | C' str        ->
+        str              |> Const'Cast |> ConstStr |> Literal |> ``Literal Atom``
+    | NC(name, str) ->
+        (name |> Const'Cast, str |> Const'Cast)
+        |> ``Name and ConstStr`` |>  Literal |> ``Literal Atom``
+    | Fn(fn) ->
+        fn |> ``Func Predicate`` |> Literal |> ``Literal Atom``
+    | Seq(term, least, most) ->
+        ``SubSequence Atom``(``Term -> Atom`` definitions term, least, most)
+    
+    | As(term, name) ->
+        ``Term -> Atom`` definitions term |> fun it -> ``Name Binding Atom``(name, it)
+    
+    | Ref name ->
+        definitions.[name] |> ``Named Atom``
+    
+    | ``P|`` branches ->
+        branches 
+        |> List.map (fun it -> [it])
 
-let def (lexerBuilder: Lexer CList) (language: LanguageArea) 
-        (name: string) =
-        Def(name, lexerBuilder, language)
+        |> List.map (``Term -> Atom`` definitions) 
+        |> And
+        |> fun it -> Or [it] |> 
+
+
+        raise NotImplemented
+
+    |> Atom
+
+
+
+//let def (lexerBuilder: Lexer CList) (language: LanguageArea) 
+//        (name: string) =
+//        Def(name, lexerBuilder, language)
         
     
     

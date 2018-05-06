@@ -3,8 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27428.2002
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Ruiko", "Ruiko\Ruiko.csproj", "{A1453FA7-E99C-4AD7-9E3F-F3DA7CA93F97}"
-EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Ruikowa", "Ruikowa\Ruikowa.fsproj", "{CCBF0407-FA25-4F70-8E8D-7C60DAC4DAC5}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Ruikowa.cs", "Ruikowa.cs\Ruikowa.cs.csproj", "{D9063263-E818-4CB0-A16E-02E1DB6179EB}"
@@ -16,7 +14,7 @@ Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Ruiko.UnitTest", "Ruiko.Uni
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "RuikoCommandLine", "RuikoCommandLine\RuikoCommandLine.fsproj", "{7A912415-6586-4FE0-A92B-D60D027EBF29}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PosSpecificStartsWith", "PosSpecificStartsWith\PosSpecificStartsWith.csproj", "{F5661F3E-6317-4F01-ACD0-F861BE9CC326}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PosSpecificStartsWith", "PosSpecificStartsWith\PosSpecificStartsWith.csproj", "{F5661F3E-6317-4F01-ACD0-F861BE9CC326}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{B62AD0EF-4146-428C-9D1C-87FF09FFF4C0}"
 	ProjectSection(SolutionItems) = preProject
@@ -25,19 +23,18 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		Performance3.psess = Performance3.psess
 	EndProjectSection
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Refactor", "Refactor\Refactor.fsproj", "{9C33DB63-3E86-4101-A0AC-49B18FBD58EA}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Refactor.UnitTest", "Refactor.UnitTest\Refactor.UnitTest.fsproj", "{5A9D9F4A-D109-4C4D-A4BB-18C41C77A287}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Refactor.CommandLine", "Refactor.CommandLine\Refactor.CommandLine.fsproj", "{ED46AE71-E0E4-484B-83BB-C36A527B4A03}"
+EndProject
 Global
-	GlobalSection(Performance) = preSolution
-		HasPerformanceSessions = true
-	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{A1453FA7-E99C-4AD7-9E3F-F3DA7CA93F97}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A1453FA7-E99C-4AD7-9E3F-F3DA7CA93F97}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A1453FA7-E99C-4AD7-9E3F-F3DA7CA93F97}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A1453FA7-E99C-4AD7-9E3F-F3DA7CA93F97}.Release|Any CPU.Build.0 = Release|Any CPU
 		{CCBF0407-FA25-4F70-8E8D-7C60DAC4DAC5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{CCBF0407-FA25-4F70-8E8D-7C60DAC4DAC5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CCBF0407-FA25-4F70-8E8D-7C60DAC4DAC5}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -58,11 +55,26 @@ Global
 		{F5661F3E-6317-4F01-ACD0-F861BE9CC326}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F5661F3E-6317-4F01-ACD0-F861BE9CC326}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F5661F3E-6317-4F01-ACD0-F861BE9CC326}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9C33DB63-3E86-4101-A0AC-49B18FBD58EA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9C33DB63-3E86-4101-A0AC-49B18FBD58EA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9C33DB63-3E86-4101-A0AC-49B18FBD58EA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9C33DB63-3E86-4101-A0AC-49B18FBD58EA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5A9D9F4A-D109-4C4D-A4BB-18C41C77A287}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5A9D9F4A-D109-4C4D-A4BB-18C41C77A287}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5A9D9F4A-D109-4C4D-A4BB-18C41C77A287}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5A9D9F4A-D109-4C4D-A4BB-18C41C77A287}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ED46AE71-E0E4-484B-83BB-C36A527B4A03}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ED46AE71-E0E4-484B-83BB-C36A527B4A03}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ED46AE71-E0E4-484B-83BB-C36A527B4A03}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ED46AE71-E0E4-484B-83BB-C36A527B4A03}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {95564F2E-280F-43A2-AD13-BF5D31D4853E}
+	EndGlobalSection
+	GlobalSection(Performance) = preSolution
+		HasPerformanceSessions = true
 	EndGlobalSection
 EndGlobal

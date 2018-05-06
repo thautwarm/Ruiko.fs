@@ -119,7 +119,7 @@ and Literal(literal: ``Literal Spec``) =
             | ``Not ValueStr`` str            -> "~L", str
             | ConstStr  str                   -> "C",  str 
             | ``Not ConstStr`` str            -> "~C", str
-            | ``Name and Value``(name, value) -> sprintf "<%s>" name, value
+            | ``Name and ConstStr``(name, value) -> sprintf "<%s>" name, value
             | ``Func Predicate`` f            -> "", f.ToString() |> sprintf "@%s"
             |> function
                 | ("",  fnName) -> fnName |> Const'Cast
@@ -156,7 +156,7 @@ and Literal(literal: ``Literal Spec``) =
                 const'str &= token.value
             | ``Not ConstStr`` const'str          ->
                 const'str &!= token.value
-            | ``Name and Value``(name, const'str)   ->
+            | ``Name and ConstStr``(name, const'str)   ->
                 name &= token.name && const'str &= token.value
             | ``Func Predicate`` predicate          ->
                 predicate(token)

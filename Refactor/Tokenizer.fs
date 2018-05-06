@@ -10,48 +10,50 @@ type Tokenizer = {
     colno    : int
     lineno   : int
     filename : string //Maybe Path Object Sooner.
-}
+    }
+    with 
+        override this.ToString() = 
+            sprintf "{name: %s, value: '%s', colno: %d, lineno: %d}" this.name this.value this.colno this.lineno
+
+type Literal = 
+    | R      of Regex
+    | R'     of Regex
     
-
-type ``Literal Spec`` = 
-    | RegExp               of Regex
-    | ``Not RegExp``       of Regex
-    
-    | Name                of string // Name
-    | ``Not Name``        of string
+    | N      of string // Name
+    | N'     of string
     
     
-    | ValueStr            of string // Runtime String 
-    | ``Not ValueStr``    of string
+    | L      of string // Runtime String 
+    | L'     of string
 
-    | ConstStr            of string // Const String
-    | ``Not ConstStr``    of string 
-
-
-    | ``Name and ConstStr``  of string * string
-    | ``Func Predicate``  of (Tokenizer -> bool)
+    | C      of string // Const String
+    | C'     of string 
 
 
+    | NC     of string * string
+    | Fn     of (Tokenizer -> bool)
 
 
-type Lexer = Lexer of ``Literal Spec`` list
+
+
+type Lexer = Lexer of Literal list
     with 
         member this.lex (raw: string) (pos: int): string option = 
-            let rec processing': ``Literal Spec`` list -> string option =
+            let rec processing': Literal list -> string option =
                 function
                 | []     -> None
                 | x::xs  -> 
                     match x with
-                    | RegExp  regex
-                    | ``Not RegExp`` regex ->
+                    | R  regex
+                    | R' regex ->
                         let r = regex.Match(raw, pos)
                         if r.Success then r.Value |> Some
                         else processing' xs
                 
-                    | ConstStr  literal 
-                    | ``Not ConstStr`` literal
-                    | ValueStr  literal 
-                    | ``Not ValueStr`` literal ->
+                    | C  literal 
+                    | C' literal
+                    | L  literal 
+                    | L' literal ->
                         if StrUtils.StartsWithAt(raw, literal, pos)
                         then literal |> Some
                         else processing' xs
@@ -66,8 +68,9 @@ type Lexer = Lexer of ``Literal Spec`` list
    
 let Lexing (castMap: Map<string, string>) // the values of castMap must be const strings in Utils.ConstStrPool.
            (tokenTable: ((string * (string -> int -> string option)) list)) 
-           (raw: string)
            (filename: string)
+           (raw: string)
+          
           : Tokenizer seq =
     if raw.Length = 0 then seq []
     else 

@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    
+    
+    
+    <Compile Include="Utils.fs" />
+    <Compile Include="Tokenizer.fs" />
+    <Compile Include="ParserC.fs" />
+    <Compile Include="Library.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Ruikowa.cs\Ruikowa.cs.csproj" />
+  </ItemGroup>
+
+</Project>
