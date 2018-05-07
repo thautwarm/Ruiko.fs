@@ -6,9 +6,8 @@
 
   <ItemGroup>
     
-    
-    
     <Compile Include="Utils.fs" />
+    <Compile Include="SYMBOL.fs" />
     <Compile Include="Tokenizer.fs" />
     <Compile Include="ParserC.fs" />
     <Compile Include="Library.fs" />

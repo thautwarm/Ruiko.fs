@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Refactor\Refactor.fsproj" />
+    <ProjectReference Include="..\Ruikowa\Ruikowa.fsproj" />
   </ItemGroup>
 
 </Project>

@@ -43,9 +43,7 @@ let main argv =
     
     let tokens = "
     123 
-    
     5 
-    
         c 
     c 
     c   

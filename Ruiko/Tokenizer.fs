@@ -1,5 +1,5 @@
 ﻿module Tokenizer
-
+open SYMBOL
 open Utils
 open System.Text.RegularExpressions
 open Ruikowa.CSharp
@@ -126,16 +126,16 @@ let Lexing (castMap: Map<string, string>) // the values of castMap must be const
     processing' (0, 0, 0) tokenTable
 
 
-let ``INDENT Symbol`` = "INDENT" |> Const'Cast;
-let ``DEDENT Symbol`` = "DEDENT" |> Const'Cast;
+    
+
+
 let Space = Regex "\G\s+"
 
+let be'dedent (lineno: int) (colno: int) (filename: string) = 
+    {value=System.String.Empty; name=SYMBOL.DEDENT; colno=colno; lineno=lineno; filename=filename}
 
-let BeIndent (lineno: int) (colno: int) (filename: string) = 
-    {value=System.String.Empty; name=``INDENT Symbol``; colno=colno; lineno=lineno; filename=filename}
-
-let BeDeDent (lineno: int) (colno: int) (filename: string) = 
-    {value=System.String.Empty; name=``DEDENT Symbol``; colno=colno; lineno=lineno; filename=filename}
+let be'indent (lineno: int) (colno: int) (filename: string) = 
+    {value=System.String.Empty; name=SYMBOL.INDENT; colno=colno; lineno=lineno; filename=filename}
 
 let update'cursor (lineno, colno) (r: string) = 
     let row_inc = r |> Seq.where (fun it -> it = '\n') |> Seq.length
@@ -194,8 +194,8 @@ let IndentedLexing
                         
                     yield 
                         if colno > current then 
-                            BeIndent  >> bye'with (fun () -> indent'level.Push colno) 
-                        else BeDeDent >> bye'with (fun () -> current <- indent'level.Pop())
+                             be'indent  >> bye'with (fun () -> indent'level.Push colno) 
+                        else be'dedent >> bye'with (fun () -> current <- indent'level.Pop())
                         <| lineno <| colno <| filename
                     
                     current <- indent'level |> Seq.head 

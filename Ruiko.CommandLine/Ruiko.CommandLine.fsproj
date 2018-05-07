@@ -10,7 +10,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Refactor\Refactor.fsproj" />
+    <ProjectReference Include="..\Ruiko\Ruiko.fsproj" />
   </ItemGroup>
 
 </Project>
