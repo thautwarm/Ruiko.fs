@@ -5,6 +5,7 @@ open ParserC
 open Tokenizer
 open System.Text.RegularExpressions
 open Utils
+open System.Linq
 
 
 [<EntryPoint>]
@@ -40,21 +41,37 @@ let main argv =
                      |> fun it -> [("marisa", it.lex); ("space", space_lexer.lex)]
         
     
-    let tokens = "123 5 c c c c" |> Lexing (Map[]) token'table "testfile"
+    let tokens = "
+    123 
+    
+    5 
+    
+        c 
+    c 
+    c   
+c
+    123 
+        123
+
+123
+    
+    " 
+                  |> IndentedLexing (Map[]) token'table "testfile"
                   |> Seq.filter (fun it -> it.name <> "space")
                   |> Array.ofSeq
     
     
-                
-    tokens |> List.ofArray |> fun it -> printfn "%s" <| it.ToString()        
+           
+    tokens.ToList().ForEach(fun it -> printfn "%s" <| it.ToString())
+
     
 
-    (Named X) |> ParserC.Match state tokens
-    |> fun it ->
-        match it with
-        | Matched it ->
-              printfn "%s" <| it.ToString()
-        | _ -> ()
+    //(Named X) |> ParserC.Match state tokens
+    //|> fun it ->
+    //    match it with
+    //    | Matched it ->
+    //          printfn "%s" <| it.ToString()
+    //    | _ -> ()
    
     
     0 // return an integer exit code

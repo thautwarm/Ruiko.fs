@@ -5,6 +5,7 @@ open System
 type 'a CList = 'a System.Collections.Generic.List
 type CDict<'k, 'v> = System.Collections.Generic.Dictionary<'k, 'v>
         
+type CStack<'e> = System.Collections.Generic.Stack<'e>
 
 let range = System.Linq.Enumerable.Range
 let ConstStrPool: CDict<string, string> = new CDict<string, string>()
@@ -41,12 +42,8 @@ let inline BMonad' (``do``: unit-> 'G) (from: bool) (default': 'G) =
     | false       -> default'
     | _           -> ``do``()
 
-let inline bye'with (action'Map: ('T * (unit -> unit)) List) (result: 'T)  = 
-    action'Map 
-    |> Seq.where (fun (it, _) -> it = result) 
-    |> Seq.tryHead 
-    |> SMonad (fun (_, it) -> it()) 
-    |> ignore
+let inline bye'with (action: (unit -> unit)) (result: 'T)  = 
+    action()
     result
 
 type tuple =
