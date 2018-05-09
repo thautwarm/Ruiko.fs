@@ -6,11 +6,14 @@
 
   <ItemGroup>
     
+   
+    
     <Compile Include="Utils.fs" />
     <Compile Include="SYMBOL.fs" />
     <Compile Include="Tokenizer.fs" />
     <Compile Include="ParserC.fs" />
-    <Compile Include="Library.fs" />
+    <Compile Include="EDSL.fs" />
+   <Compile Include="Bootstrap.fs" />
   </ItemGroup>
 
   <ItemGroup>

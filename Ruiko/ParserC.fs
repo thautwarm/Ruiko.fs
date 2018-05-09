@@ -4,7 +4,6 @@
 open Utils
 open Ruikowa.CSharp
 open Tokenizer
-open System.Text.RegularExpressions
    
 let JudgeByFnDict(fnDict: CDict<'T, ('G -> bool)>) (inp: 'G) = 
     fnDict.Values |> Seq.forall (fun it -> it inp)
@@ -19,6 +18,7 @@ and State  = {
     lang : LanguageArea
     trace: string Trace
     mutable context  : Context
+    mutable generalContext: CDict<string, obj> // for more general usage, like evaling when parsing and using global context.
     mutable lrParser : string option
 }
     with member this.Commit() = this.trace.Commit(), this.context
@@ -30,6 +30,7 @@ and State  = {
             let new' = {
                     lang = lang
                     trace = Trace() 
+                    generalContext = CDict()
                     context = CDict()
                     lrParser = None 
                     }

@@ -64,8 +64,5 @@ let inline (</>) (arg: 'T list) (f: 'T -> 'G) = List.map f arg
 let inline (<*>) (arg: 'T) (f1: 'T -> 'G, f2: 'T -> 'H) = f1 arg, f2 arg
 
 let inline (<**>) (arg: 'T) (f1: 'T -> 'G, f2: 'T -> 'H, f3: 'T -> 'R) = f1 arg, f2 arg, f3 arg
-
-
-let inline (=>)  (a: 'T) (b: 'G): 'T * 'G = a, b
     
 let inline (<..>)  (a: 'T) (b: 'G): 'T * 'G = a, b
