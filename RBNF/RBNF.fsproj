@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <NoWarn>62</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+   
+    <Compile Include="Infras.fs" />
+    <Compile Include="Core\CachingPool.fs" />
+    <Compile Include="Library.fs" />
+    <Compile Include="Core\AST.fs" />
+    <Compile Include="Core\State.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="Core\ParserC.fs" />
+    
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Ruikowa.cs\Ruikowa.cs.csproj" />
+  </ItemGroup>
+
+</Project>

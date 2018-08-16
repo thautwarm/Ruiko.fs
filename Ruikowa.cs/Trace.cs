@@ -4,163 +4,85 @@ using System.Collections.Generic;
 
 namespace Ruikowa.CSharp
 {
-    using History = ValueTuple<int, int>;
-    public class Trace<T> : IEnumerable<T> where T: class
+    public class Trace<T>
     {
-        public int Count => _trace.Length;
-        private _Trace<_Trace<T>> _trace;
-        private _Trace<T> Current => _trace[Count - 1];
-        public Trace() => _trace = new _Trace<_Trace<T>>();
-
-        public void NewOne()
+        private List<T> records;
+        private int virtual_len;
+        public Trace()
         {
-            
-            if (Count < _trace.Mem)
+            records = new List<T> { };
+            virtual_len = 0;
+        }
+        public void Clear()
+        {
+            virtual_len = 0;
+        }
+
+        public void Reset(int history)
+        {
+            virtual_len = history;
+        }
+
+        public void Append(T e)
+        {
+            var s_len = virtual_len;
+            if (MaxFetched == s_len)
             {
-                _trace[_trace.Length++].Length = 0;
+                records.Add(e);
+                virtual_len++;
+                return;
             }
-            else
+            virtual_len++;
+            records[s_len] = e;
+        }
+
+        public bool Inc(Func<T> Factory)
+        {
+            var s_len = virtual_len;
+            if (MaxFetched == s_len)
             {
-                _trace.Add(new _Trace<T>());
+                records.Add(Factory());
+                virtual_len++;
+                return true;
             }
+            virtual_len++;
+            return false;
         }
 
-        public int MacFetched => _trace.Mem;
+        public int Commit() => virtual_len;
 
-        #region consistent with _Trace.
-        
-        public void Add(T e) => Current.Add(e);
+        public int EndIndex => virtual_len - 1;
+        public int MaxFetched => records.Count;
 
-        public T this[int idx] => Current[idx];
-
-        public int Find(T e) => Current.Find(e);
-
-        public int FindSameObj(T e) => Current.FindSameObj(e);
-
-        public T[] GetSlice(int begin, int end) => Current.GetSlice(begin, end);
-        public T Pop() => Current.Pop();
-
-        public IEnumerator<T> GetEnumerator() => ((IEnumerable<T>)Current).GetEnumerator();
-
-        
-        IEnumerator IEnumerable.GetEnumerator() => ((IEnumerable<T>)Current).GetEnumerator();
-        #endregion
-        #region version control
-        public History Commit()
+        public int Size()
         {
-            return (Count, _trace[Count - 1].Length);
+            return virtual_len;
         }
 
-        public void Reset(History history)
-        {
-            var (count, length) = history;
-            _trace.Length = count;
-            _trace[count - 1].Length = length;
-        }
-        #endregion
-
-    }
-    internal class _Trace<T> : IEnumerable<T> where T : class
-    {
-        private List<T> _trace;
-        private int _virtualLength;
-
-        public _Trace()
-        {
-            _trace = new List<T> { };
-            _virtualLength = 0;
-        }
-        public _Trace(T[] arr)
-        {
-            _trace = new List<T>(arr);
-            _virtualLength = 0;
-        }
-        public T this[int idx]
+        public T this[int i]
         {
             get
             {
-                return _trace[idx];
-            }
-            set
-            {
-                _trace[idx] = value;
-            }
-        }
-
-        public T[] GetSlice(int begin, int end)
-        {
-            if (end == -1)
-            {
-                end = _virtualLength;
-            }
-            var arr = new T[end - begin];
-
-            for(int i = begin; i < end; ++i)
-            {
-                arr[i] = _trace[i];
-            }
-            return arr;
-        }
-
-
-        public int Length
-        {
-            get => _virtualLength;
-            set => _virtualLength = value;
-        }
-
-        public int Mem => _trace.Count;
-        public int Find(T it)
-        {
-            for (int i = 0; i < _virtualLength; ++i)
-            {
-                var e = _trace[i];
-                if (e.Equals(it))
+                if (i >= virtual_len)
                 {
-                    return i;
+                    throw new IndexOutOfRangeException();
+                }
+                return records[i];
+            }
+        }
+
+        public bool Contains(T e)
+        {
+            for(int i = 0; i < virtual_len; ++i)
+            {
+                if (records[i].Equals(e))
+                {
+                    return true;
                 }
             }
-            return -1;
+            return false;
         }
-
-        public int FindSameObj(T it)
-        {
-            for (int i = 0; i < _virtualLength; ++i)
-            {
-                var e = _trace[i];
-                if (e == it)
-                {
-                    return i;
-                }
-            }
-            return -1;
-        }
-
-        public void Add(T e)
-        {
-            if (Mem <= _virtualLength)
-            {
-                _trace.Add(e);
-            }
-            else
-            {
-                _trace[_virtualLength] = e;
-            }
-            ++_virtualLength;
-        }
-
-        public T Pop()
-        {
-            if (--_virtualLength == 0)
-            {
-                throw new IndexOutOfRangeException($"Pop an empty Trace<{nameof(T)}>.");
-            }
-            return _trace[Length - 1];
-        }
-
-        public IEnumerator<T> GetEnumerator() => ((IEnumerable<T>)_trace).GetEnumerator();
-
-        IEnumerator IEnumerable.GetEnumerator() => ((IEnumerable<T>)_trace).GetEnumerator();
     }
+  
 }
 
