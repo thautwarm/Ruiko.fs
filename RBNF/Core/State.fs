@@ -8,7 +8,9 @@ type ('P, 'T) GuardRewriter = {
     enter: (Token array -> ('P, 'T) State  -> bool) option
     exit : (Token array -> ('P, 'T) State  -> bool) option
     rewrite : (('P, 'T) State -> 'T) option
-}
+    }
+    with static member wrap(parser : 'P) = {parser=parser; enter = None; exit = None; rewrite = None}
+
 and ('P, 'T) State = {
     mutable lr    : string option
     mutable ctx   : (string, 'T AST) hashmap
@@ -16,6 +18,10 @@ and ('P, 'T) State = {
     lang  : (string, ('P, 'T) GuardRewriter) hashmap
     }
     with
+    static member inst() = 
+        let trace = Trace()
+        trace.Append(Trace())
+        {lr = None; ctx = hashmap(); trace = trace; lang = hashmap();}
     member this.end_index with get() = this.trace.EndIndex
 
     member this.max_fetched with get() = this.trace.MaxFetched
@@ -42,10 +48,12 @@ and ('P, 'T) State = {
         this.current.Contains(record)
 
 let left_recur (self : ('P, 'V) State) (lr_name : string) (fn : ('P, 'V) State -> 'R) : 'R =
+    Log(sprintf "start lr for %A" lr_name)
     self.lr <- Some(lr_name)
     let ret = fn(self)
     in
     self.lr <- None
+    Log(sprintf "end lr for %A" lr_name)
     ret
 
 let with_context_recovery (self: ('P, 'V) State) (fn : ('P, 'V) State -> 'R) =

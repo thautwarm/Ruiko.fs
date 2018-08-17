@@ -8,7 +8,6 @@
    
     <Compile Include="Infras.fs" />
     <Compile Include="Core\CachingPool.fs" />
-    <Compile Include="Library.fs" />
     <Compile Include="Core\AST.fs" />
     <Compile Include="Core\State.fs" />
   </ItemGroup>
