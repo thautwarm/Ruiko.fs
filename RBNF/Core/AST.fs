@@ -21,6 +21,6 @@ let push'(ctx : (string, 'T AST) hashmap)(k: string) (value: 'T AST) =
     | (false, _) ->
         ctx.[k] <- Nested (arraylist [value])
     | (true, n)  ->
-        let (Nested lst) = n // only one pattern kind
+        let (Nested lst) = n // only one pattern here
         in
         lst.Add(value)

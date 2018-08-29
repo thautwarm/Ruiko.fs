@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\RBNF\RBNF.fsproj" />
+    <ProjectReference Include="..\Ruikowa.cs\Ruikowa.cs.csproj" />
   </ItemGroup>
 
 </Project>

@@ -21,9 +21,16 @@ let (&=) a b =
 
 
 let mutable _log_started = false 
+
+
 let inline Log msg = 
+    #if Debug 
     if _log_started then
         System.IO.File.AppendAllText("../log", msg + "\n")
     else 
         _log_started <- true
         System.IO.File.WriteAllText("../log", msg + "\n")
+    #else
+    ()
+    #endif 
+    

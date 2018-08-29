@@ -6,7 +6,9 @@ open RBNF.Infras
 open RBNF.AST
 open RBNF.State
 open RBNF.ParserC
+open RBNF.Lexer
 open Xunit.Abstractions
+open RBNF
 
 let def_token str_lst = 
     str_lst 
@@ -70,7 +72,17 @@ type MyTests(output:ITestOutputHelper) =
                 | _ as it ->  raise' <| sprintf "3 %A" it 
             | _  as it ->  raise' <| sprintf "2 %A" it 
         | _ as it -> raise' <| sprintf "1 %A" it 
+        0
+    [<Fact>]
+    member __.``auto lexer``() =
+        let factor = StringFactor ["123"; "aaa"; "*&^"]
+        let lexer_tb = [{factor = factor; name=CachingPool.cast "const"}]
+        let cast_map = None
         
+        lex cast_map lexer_tb {text = "123aaa*&^"; filename = "a.fs"}
+        |> List.ofSeq
+        |> sprintf "%A"
+        |> output.WriteLine
 
         0
  
