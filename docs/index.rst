@@ -10,11 +10,19 @@ Welcome to RBNF .NET's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   lexer
+   parser_combinator
+   ast_rewrite
+   parsing_guard
 
 
-Indices and tables
-==================
+Preview
+---------------
 
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+``RBNF`` is an extended EBNF which could describe grammars formed by arbitrary rules.
+
+It has a tiny core abstraction which is orthogonal and complete,
+as a consequence, it's made by very few constructs.
+All the conventions exported by ``RBNF`` are natural, rational and easy to get along with.
+
+
