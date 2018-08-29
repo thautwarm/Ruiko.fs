@@ -93,3 +93,7 @@ xUnitReports
 *.pyc
 **/.idea
 **/.spyproject
+*.html
+*.js
+*.css
+docs/_build/

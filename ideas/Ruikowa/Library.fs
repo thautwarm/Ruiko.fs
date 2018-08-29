@@ -1,3 +1,0 @@
-namespace Ruikowa
-
-open Parser
