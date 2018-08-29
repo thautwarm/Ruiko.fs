@@ -9,11 +9,12 @@ open RBNF.ParserC
 open RBNF.Lexer
 open Xunit.Abstractions
 open RBNF
+open System.Text.RegularExpressions
 
-let def_token str_lst = 
-    str_lst 
+let def_token str_lst =
+    str_lst
     |> Array.ofList
-    |> Array.map 
+    |> Array.map
        (fun str ->
             {filename = ""; value = str ; name = "const" ; colno = 1; lineno = 1})
 
@@ -21,12 +22,12 @@ type MyTests(output:ITestOutputHelper) =
 
     [<Fact>]
     member __.``Direct Left Recursion`` () =
-        
-        let v1 = V("123") 
-        let v2 = V("234") 
-        
+
+        let v1 = V("123")
+        let v2 = V("234")
+
         let node = Named("node")
-        
+
         let node_imp = Or([And([node; v1]); v2])
 
         let tokens = def_token ["234"; "123"; "123"]
@@ -40,9 +41,9 @@ type MyTests(output:ITestOutputHelper) =
 
     [<Fact>]
     member __.``Indirect Left Recursion`` () =
-        
-        let v1 = V("a") 
-        let v2 = V("b") 
+
+        let v1 = V("a")
+        let v2 = V("b")
         let v3 = V("c")
         let node = Named("node")
         let mid = Named("mid")
@@ -57,36 +58,47 @@ type MyTests(output:ITestOutputHelper) =
         state.lang.["mid"]  <- GuardRewriter<string>.wrap(mid_imp)
         let raise' b = Assert.True(false, b)
 
-        match parse node tokens state with 
+        match parse node tokens state with
         | Matched(MExpr("node", Nested lst)) ->
             let a, b = lst.[0], lst.[1]
             match b with
-            | Token {value = "b"} -> 
-                match a with 
-                | MExpr("mid", Nested lst) -> 
+            | Token {value = "b"} ->
+                match a with
+                | MExpr("mid", Nested lst) ->
                     let a, b = lst.[0], lst.[1]
                     match b with
                     | Token {value = "c"} ->
                         ()
-                    | _ as it -> raise' <| sprintf "4 %A" it 
-                | _ as it ->  raise' <| sprintf "3 %A" it 
-            | _  as it ->  raise' <| sprintf "2 %A" it 
-        | _ as it -> raise' <| sprintf "1 %A" it 
+                    | _ as it -> raise' <| sprintf "4 %A" it
+                | _ as it ->  raise' <| sprintf "3 %A" it
+            | _  as it ->  raise' <| sprintf "2 %A" it
+        | _ as it -> raise' <| sprintf "1 %A" it
         0
     [<Fact>]
-    member __.``auto lexer``() =
+    member __.``auto lexer preview``() =
         let factor = StringFactor ["123"; "aaa"; "*&^"]
         let lexer_tb = [{factor = factor; name=CachingPool.cast "const"}]
         let cast_map = None
-        
+
         lex cast_map lexer_tb {text = "123aaa*&^"; filename = "a.fs"}
         |> List.ofSeq
         |> sprintf "%A"
         |> output.WriteLine
-
         0
- 
 
-    
-
-    
+    [<Fact>]
+    member __.``auto lexer``() =
+        let identifier = Regex "\G[a-zA-Z_]{1}[a-zA-Z_0-9]*"
+        let space = Regex "\G\s+"
+        let identifier = RegexFactor identifier
+        let space = RegexFactor space
+        let lexer_tb = [
+            {factor = identifier; name = CachingPool.cast "regex"}
+            {factor = space     ; name = CachingPool.cast "space"}
+        ]
+        let cast_map = None
+        lex cast_map lexer_tb  {text = "I am the bone of my sword"; filename = "a.fs"}
+        |> List.ofSeq
+        |> sprintf "%A"
+        |> output.WriteLine
+        0
