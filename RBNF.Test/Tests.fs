@@ -77,6 +77,21 @@ type MyTests(output:ITestOutputHelper) =
         0
 
     [<Fact>]
+    member __.``Infix Left Recursion``() =
+        let identifier = V "abs"
+        let plus_operator = V "+"
+        let plus_name = "plus"
+        let plus = Named plus_name
+        let plus_impl = Or [And [plus; plus_operator; identifier]; identifier]
+
+        let tokens = def_token ["abs"; "+"; "abs"; "+"; "abs"; "+"; "abs"; "+"; "abs"; "+"; "abs"]
+        let state = State<string>.inst()
+        state.lang.[plus_name] <- GuardRewriter<string>.wrap plus_impl
+        parse plus tokens state |> sprintf "%A" |> output.WriteLine
+
+        0
+
+    [<Fact>]
     member __.``auto lexer preview``() =
         let factor = StringFactor ["123"; "aaa"; "*&^"]
         let lexer_tb = [{factor = factor; name=CachingPool.cast "const"}]
