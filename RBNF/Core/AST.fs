@@ -8,12 +8,12 @@ type Token = {
     name     : string
     value    : string
 }
+
 type 'T AST =
     | Value  of 'T
     | MExpr  of string * 'T AST
     | Nested of 'T AST arraylist
     | Token  of Token
-    
 
 
 let push'(ctx : (string, 'T AST) hashmap)(k: string) (value: 'T AST) =

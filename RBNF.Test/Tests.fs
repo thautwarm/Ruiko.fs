@@ -26,15 +26,16 @@ type MyTests(output:ITestOutputHelper) =
         let v1 = V("123")
         let v2 = V("234")
 
-        let node = Named("node")
+        let node_name = "node"
+        let node = Named(node_name)
 
-        let node_imp = Or([And([node; v1]); v2])
+        let node_impl = Or([And([node; v1]); v2])
 
         let tokens = def_token ["234"; "123"; "123"]
         let take_or = Or([And([v2; v1]); v2])
 
         let state = State<string>.inst()
-        state.lang.["node"] <- GuardRewriter<string>.wrap(node_imp)
+        state.lang.[node_name] <- GuardRewriter<string>.wrap(node_impl)
         parse node tokens state |> sprintf "%A" |> output.WriteLine
 
         0
@@ -74,6 +75,7 @@ type MyTests(output:ITestOutputHelper) =
             | _  as it ->  raise' <| sprintf "2 %A" it
         | _ as it -> raise' <| sprintf "1 %A" it
         0
+
     [<Fact>]
     member __.``auto lexer preview``() =
         let factor = StringFactor ["123"; "aaa"; "*&^"]

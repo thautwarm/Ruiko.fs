@@ -42,7 +42,6 @@ type 'V Result =
    | Matched of 'V
    | LR      of pobj: obj * (('V Result) -> 'V Result)
 
-
 let rec parse (self : Parser)
               (tokens : Token array)
               (state : (Parser, 'T) State): 'T AST Result =
