@@ -51,7 +51,6 @@ let left_recur (self : ('P, 'V) State) (lr_name : string) (fn : ('P, 'V) State -
     Log(sprintf "start lr for %A" lr_name)
     self.lr <- Some(lr_name)
     let ret = fn(self)
-    in
     self.lr <- None
     Log(sprintf "end lr for %A" lr_name)
     ret
@@ -59,6 +58,5 @@ let left_recur (self : ('P, 'V) State) (lr_name : string) (fn : ('P, 'V) State -
 let with_context_recovery (self: ('P, 'V) State) (fn : ('P, 'V) State -> 'R) =
     let ctx = self.ctx
     let ret = fn(self)
-    in
     self.ctx <- ctx
     ret
