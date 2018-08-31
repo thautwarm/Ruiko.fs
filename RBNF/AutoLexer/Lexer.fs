@@ -82,7 +82,7 @@ let lex (cast_map: cast_map option)
             | {ref = _; offset = offset} when offset = n ->
                 ()
             | _ ->
-            let picked = 
+            let picked =
                 let match' = lexer_factor_match view
                 List.tryPick
                 <| fun {name=name; factor=factor} ->
@@ -90,11 +90,11 @@ let lex (cast_map: cast_map option)
                     | None -> None
                     | Some it -> Some (name, it)
                 <| lexer_table
-            match picked with 
+            match picked with
             | None ->
                 let {ref = value; offset = offset;}: string_view = view
                 let sample = value.Substring(offset, offset + 15)
-                failwithf "unknown string head: `%s` at line %d, column %d, file %s" 
+                failwithf "unknown string head: `%s` at line %d, column %d, file %s"
                             sample lineno colno filename
             | Some (name, word) ->
                 yield {
@@ -112,17 +112,17 @@ let lex (cast_map: cast_map option)
                 | line_inc ->
                     lineno <- lineno + line_inc
                     colno  <- word_len - StrUtils.StringFindIndexRight(word, '\n') - 1
-                
+
                 yield! loop({view with offset = view.offset + word_len})
             }
         in loop view
-    | Some cast_map -> 
+    | Some cast_map ->
     let rec loop view = seq{
         match view with
         | {ref = _; offset = offset} when offset = n ->
             ()
         | _ ->
-        let picked = 
+        let picked =
             let match' = lexer_factor_match view
             List.tryPick
             <| fun {name=name; factor=factor} ->
@@ -130,16 +130,16 @@ let lex (cast_map: cast_map option)
                 | None -> None
                 | Some it -> Some (name, it)
             <| lexer_table
-        match picked with 
+        match picked with
         | None ->
             let {ref = value; offset = offset} = view
             let sample = value.Substring(offset, offset + 15)
-            failwithf "unknown string head: `%s` at line %d, column %d, file %s" 
+            failwithf "unknown string head: `%s` at line %d, column %d, file %s"
                         sample lineno colno filename
         | Some (name, word) ->
-            let tk_name, tk_word = 
+            let tk_name, tk_word =
                 match Map.tryFind word cast_map with
-                | None      -> CachingPool.cast name, word 
+                | None      -> CachingPool.cast name, word
                 | Some name -> CachingPool.cast name, CachingPool.cast word
             yield  {
                     name = tk_name
@@ -158,12 +158,12 @@ let lex (cast_map: cast_map option)
                 colno  <- word_len - StrUtils.StringFindIndexRight(word, '\n') - 1
             yield! loop({view with offset = view.offset + word_len})
         }
-    
+
     in loop view
 
-    
 
-let lexer_tb_to_const lexer_tb = 
+
+let lexer_tb_to_const lexer_tb =
     [
         for each in lexer_tb ->
         match each with

@@ -17,13 +17,13 @@ let C string =
     {test  = fun (token: Token) -> token.value &= string
      lexer = Some <| fun () -> {name = CachingPool.cast "auto_const"; factor = StringFactor [string]}}
     |> Literal
- 
+
 let N name =
     let name = CachingPool.cast name
     {test  = fun (token: Token) -> token.name &= name
      lexer = None}
     |> Literal
-    
+
 let V value =
     {test = fun (token: Token) -> token.value = value
      lexer = None}
@@ -54,8 +54,8 @@ let R name regex =
     }
     |> Literal
 type 't state with
-    member this.implement (named: 't parser) (parser : 't parser) = 
+    member this.implement (named: 't parser) (parser : 't parser) =
         match named with
-        | Named name -> 
-            this.lang.[name] <- parser 
+        | Named name ->
+            this.lang.[name] <- parser
         | _ -> failwith "Only named parser can be implemented."

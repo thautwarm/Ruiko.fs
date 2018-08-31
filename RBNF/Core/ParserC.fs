@@ -28,21 +28,21 @@ type 't parser =
     // | Jump   of (string, Parser) Map
     | AnyNot of 't parser
 
-    static member (=>) (this, fn) = 
+    static member (=>) (this, fn) =
         Rewrite(this, fn)
-    
+
     member this.push_to(name) =
         Push(name, this)
 
-    member this.bind_to(name) = 
+    member this.bind_to(name) =
         Bind(name, this)
 
     static member (!) this =
         AnyNot this
-    
-    member this.otherwise(other) = 
+
+    member this.otherwise(other) =
         match this with
-        | Or this -> 
+        | Or this ->
             match other with
             | Or other -> List.append this other
             | _        -> List.append this [other]
@@ -52,12 +52,12 @@ type 't parser =
             | _        -> [this; other]
         |> Or
 
-    static member (|||) (this: 't parser, other) = 
+    static member (|||) (this: 't parser, other) =
         this.otherwise(other)
-    
-    member this.next_by(other) = 
+
+    member this.next_by(other) =
         match this with
-        | And this -> 
+        | And this ->
             match other with
             | And other -> List.append this other
             | _        -> List.append this [other]
@@ -66,25 +66,25 @@ type 't parser =
             | And other -> this :: other
             | _        -> [this; other]
         |> And
-    
-    static member (?) (this) = 
+
+    static member (?) (this) =
         Rep(0, 1, this)
 
     member this.repeat(at_least: int) = Rep(at_least, -1, this)
-    
+
     member this.repeat(at_least: int, at_most: int) = Rep(at_least, at_most, this)
-    
-    member this.join(p: 't parser) = 
+
+    member this.join(p: 't parser) =
         ()
 
     member this.Item
         with get(at_least: int, at_most: int) = Rep(at_least, at_most, this)
-    
-    
 
-    
 
-        
+
+
+
+
 
 and 't rewrite = 't state -> 't AST -> 't AST
 
@@ -95,7 +95,7 @@ and 't state = {
     lang  : (string, 't parser) hashmap
     }
     with
-    static member inst(): 't state = 
+    static member inst(): 't state =
         let trace = Trace()
         trace.Append(Trace())
         {
@@ -135,8 +135,8 @@ and 't state = {
         self.lr <- None
         Log(fun () -> sprintf "end lr for %A" lr_name)
         ret
-    
-    static member with_context_recovery (self: 't state) (fn: 't state -> 'r): 'r = 
+
+    static member with_context_recovery (self: 't state) (fn: 't state -> 'r): 'r =
         let ctx = self.ctx
         let ret = fn(self)
         self.ctx <- ctx
@@ -158,14 +158,14 @@ let rec parse (self : 't parser)
         | Unmatched -> Unmatched
         | Matched v -> Matched <| app state v
         | LR(_, stack') ->
-        let stack(res: 't Result) = 
-            match stack' res with 
+        let stack(res: 't Result) =
+            match stack' res with
             | LR _ | Unmatched -> Unmatched
             | Matched v -> Matched <| app state v
         LR(self, stack)
 
     | Predicate pred ->
-        if pred state then 
+        if pred state then
             Unchecked.defaultof<'t> |> Value |> Matched
         else
             Unmatched
@@ -187,7 +187,7 @@ let rec parse (self : 't parser)
         if lit.test token then
             state.new_one() |> ignore
             Matched(Token token)
-        else 
+        else
             Unmatched
 
 
@@ -213,7 +213,7 @@ let rec parse (self : 't parser)
         | Unmatched ->
             Unmatched
         | (Matched result) as it ->
-            push' state.ctx name result 
+            push' state.ctx name result
             it
         | LR (pobj, stack') as it ->
             let stack(ast : 't Result) =
@@ -224,18 +224,18 @@ let rec parse (self : 't parser)
                     it
                 | _ -> failwith "Impossible"
             LR(self, stack)
-        
+
     | Named name ->
         Log <| fun () -> "start " + name
         let parser = state.lang.[name]
         let exit_task =
             match parser with
-            | Rewrite _ -> 
-                let inline exit_task v = 
+            | Rewrite _ ->
+                let inline exit_task v =
                     Matched v
                 exit_task
             | _ ->
-                let inline exit_task v = 
+                let inline exit_task v =
                     Matched <| MExpr(name, v)
                 exit_task
 
@@ -257,7 +257,7 @@ let rec parse (self : 't parser)
         state.append name
         state.ctx <- hashmap()
         match parse parser tokens state with
-        | Unmatched -> Unmatched | Matched v -> exit_task v 
+        | Unmatched -> Unmatched | Matched v -> exit_task v
         | LR(pobj, stack') ->
         if name <> state.lr.Value then
             let stack(ast: 't Result) =
@@ -266,7 +266,7 @@ let rec parse (self : 't parser)
                 | Matched v        -> exit_task v
             LR(self, stack)
         else
-        State<'t>.left_recur state name <| 
+        State<'t>.left_recur state name <|
         fun state ->
         let ctx = hashmap(state.ctx) // copy
         match parse parser tokens state with
@@ -275,7 +275,7 @@ let rec parse (self : 't parser)
         let rec loop head =
             let head = exit_task head
             Log <| fun() -> sprintf "loop++, head : %A" head
-            match State<'t>.with_context_recovery state 
+            match State<'t>.with_context_recovery state
                   <| fun state ->
                      state.ctx <- hashmap(ctx)
                      stack' head
@@ -336,7 +336,7 @@ let rec parse (self : 't parser)
                 loop is_lr nested left
             | LR(_, stack') ->
             if is_lr then Unmatched
-            else 
+            else
             let stack ast =
                 let nested' = arraylist(nested)
                 match stack' ast with
@@ -346,7 +346,7 @@ let rec parse (self : 't parser)
                 loop true nested' left
             LR(self, stack)
         loop false nested ands
-        
+
     | Rep (at_least, at_most, parser)->
         let history = state.commit()
         let nested     = arraylist()
@@ -354,10 +354,10 @@ let rec parse (self : 't parser)
         let CONTINUE   = 1
         let FAIL       = 2
         let FINDLR     = 3
-        let mutable lr = None 
+        let mutable lr = None
         let foreach (nested: 't AST arraylist) times =
             if times = at_most then
-                FINISH 
+                FINISH
             else
             let sub_history = state.commit()
             match parse parser tokens state with
@@ -365,49 +365,49 @@ let rec parse (self : 't parser)
                 if times >= at_least
                 then
                     state.reset sub_history
-                    FINISH 
-                else FAIL 
+                    FINISH
+                else FAIL
             | LR(pobj, stack') ->
                 if at_least = 0 then
                     state.reset sub_history
-                    let msg = 
+                    let msg =
                         sprintf
-                            "Left recursion supporting is ambiguous with repeatable parser(%A) that which couldn't fail." 
+                            "Left recursion supporting is ambiguous with repeatable parser(%A) that which couldn't fail."
                             self
                     System.Diagnostics.Trace.TraceWarning msg
-                    FAIL 
+                    FAIL
                 else
                     lr <- Some((pobj, stack'))
                     FINDLR
             | Matched v ->
                 merge_nested nested v
                 CONTINUE
-            
-        let rec loop_lr nested times = 
-            match foreach nested times with 
+
+        let rec loop_lr nested times =
+            match foreach nested times with
             | x when x = CONTINUE    -> loop_lr nested <| times + 1
-            | x when x = FINISH      -> Matched <| Nested nested 
+            | x when x = FINISH      -> Matched <| Nested nested
             | x when x = FINDLR ||  x = FAIL -> Unmatched
             | _           -> failwith "Lack of DT"
 
-        let rec loop_no_lr nested times = 
-            match foreach nested times with 
+        let rec loop_no_lr nested times =
+            match foreach nested times with
             | x when x = CONTINUE -> loop_no_lr nested <| times + 1
             | x when x = FINISH   -> Matched <| Nested nested
-            | x when x = FAIL     -> 
+            | x when x = FAIL     ->
                 state.reset history
                 Unmatched
-            | x when x = FINDLR   -> 
+            | x when x = FINDLR   ->
                 let (pobj, stack') = lr.Value in
-                let stack ast = 
+                let stack ast =
                     let nested = arraylist nested
-                    match stack' ast with 
-                    | LR _ 
-                    | Unmatched  -> 
+                    match stack' ast with
+                    | LR _
+                    | Unmatched  ->
                         if times < at_least then
                             Unmatched
-                        else 
-                        Matched <| Nested nested 
+                        else
+                        Matched <| Nested nested
                     | Matched v ->
                     merge_nested nested v
                     loop_lr nested <| times + 1

@@ -37,7 +37,7 @@ type MyTests(output:ITestOutputHelper) =
         let node_impl = Or [And [node; v1]; v2]
         let tokens = def_token ["234"; "123"; "123"]
         let state = State<string>.inst()
-        let (:=) = state.implement 
+        let (:=) = state.implement
         node := node_impl
         parse node tokens state |> sprintf "%A" |> output.WriteLine
         0
@@ -86,8 +86,8 @@ type MyTests(output:ITestOutputHelper) =
         let plus = Named plus_name
         let plus_impl = Or [And [plus; plus_operator; identifier]; identifier]
 
-        let tokens = 
-            def_token <| 
+        let tokens =
+            def_token <|
             [
                 "abs"
                 "+"
@@ -140,8 +140,8 @@ type MyTests(output:ITestOutputHelper) =
     [<Fact>]
     member __.``rewrite add``() =
         let plus = Named "plus"
-        let tokens = 
-            
+        let tokens =
+
             [
                 "abs"
                 "+"
@@ -159,9 +159,9 @@ type MyTests(output:ITestOutputHelper) =
             |> def_token
 
         let state = State<Expr>.inst()
-        
+
         let (:=) = state.implement
-        let identifier = 
+        let identifier =
             R "identifier" "[a-zA-Z_]{1}[a-zA-Z_0-9]*" =>
             fun state ->
             function
@@ -169,7 +169,7 @@ type MyTests(output:ITestOutputHelper) =
             | _ as it -> failwithf "%A" it
 
         plus := Or
-                [ 
+                [
                     And [plus;  C "+"; identifier]
                     identifier
                 ]
@@ -181,16 +181,16 @@ type MyTests(output:ITestOutputHelper) =
                     let (Value r) = arr.[2]
                     Add(l, r) |> Value
                 | _ -> ast
-        
+
         sprintf "%A" state.lang.["plus"] |> output.WriteLine
         let a, b = analyse analysis.crate state.lang
-        
+
         let tokens = lex None (Array.toList b) {filename=""; text="abs+abs+abs"} |> Array.ofSeq
 
-        //Array.map 
-        //<| fun each -> each.value &= cast each.value 
+        //Array.map
+        //<| fun each -> each.value &= cast each.value
         //<| tokens
-        //|> sprintf "%A" 
+        //|> sprintf "%A"
         //|> output.WriteLine
 
         parse plus tokens state |> sprintf "%A" |> output.WriteLine
