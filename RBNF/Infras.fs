@@ -8,7 +8,7 @@ type 'a M =
     | Just of 'a
     | Nothing
 
-let (|>>) (m : 'a M) (f : 'a -> 'b M) : 'b M =
+let (>>=) (m : 'a M) (f : 'a -> 'b M) : 'b M =
     match m with
     | Just a ->  f a
     | Nothing -> Nothing

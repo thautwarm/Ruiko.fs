@@ -5,22 +5,82 @@ open Ruikowa.CSharp
 open System
 
 type 't parser =
-| Predicate of ('t state -> bool)
-| Rewrite   of ('t parser * ('t state -> 't AST -> 't AST))
-(**literal*)
-| Literal   of (Token -> bool)
-| Any
-(**atom*)
-| Bind  of string * 't parser
-| Push  of string * 't parser
-| Named of string
+    | Predicate of ('t state -> bool)
+    | Rewrite   of  't parser * 't rewrite
+    (**literal*)
+    | Literal   of (Token -> bool)
+    | Any
+    (**atom*)
+    | Bind  of string * 't parser
+    | Push  of string * 't parser
+    | Named of string
 
-(** composed *)
-| And    of 't parser list
-| Or     of 't parser list
-| Rep    of int * int * 't parser
-// | Jump   of (string, Parser) Map
-| AnyNot of 't parser
+    (** composed *)
+    | And    of 't parser list
+    | Or     of 't parser list
+    | Rep    of int * int * 't parser
+    // | Jump   of (string, Parser) Map
+    | AnyNot of 't parser
+
+    static member (=>) (this, fn) = 
+        Rewrite(this, fn)
+    
+    member this.push_to(name) =
+        Push(name, this)
+
+    member this.bind_to(name) = 
+        Bind(name, this)
+
+    static member (!) this =
+        AnyNot this
+    
+    member this.otherwise(other) = 
+        match this with
+        | Or this -> 
+            match other with
+            | Or other -> List.append this other
+            | _        -> List.append this [other]
+        | _ ->
+            match other with
+            | Or other -> this :: other
+            | _        -> [this; other]
+        |> Or
+
+    static member (|||) (this: 't parser, other) = 
+        this.otherwise(other)
+    
+    member this.next_by(other) = 
+        match this with
+        | And this -> 
+            match other with
+            | And other -> List.append this other
+            | _        -> List.append this [other]
+        | _ ->
+            match other with
+            | And other -> this :: other
+            | _        -> [this; other]
+        |> And
+    
+    static member (?) (this) = 
+        Rep(0, 1, this)
+
+    member this.repeat(at_least: int) = Rep(at_least, -1, this)
+    
+    member this.repeat(at_least: int, at_most: int) = Rep(at_least, at_most, this)
+    
+    member this.join(p: 't parser) = 
+        ()
+
+    member this.Item
+        with get(at_least: int, at_most: int) = Rep(at_least, at_most, this)
+    
+    
+
+    
+
+        
+
+and 't rewrite = 't state -> 't AST -> 't AST
 
 and 't state = {
     mutable lr    : string option
@@ -78,7 +138,7 @@ and 't state = {
 
 and 't State = 't state
 
-type 't Result =
+and 't Result =
    | Unmatched
    | Matched of 't AST
    | LR      of parser: 't parser * (('t Result) -> 't Result)
@@ -162,8 +222,17 @@ let rec parse (self : 't parser)
     | Named name ->
         Log <| fun () -> "start " + name
         let parser = state.lang.[name]
-        let inline exit_task(v) =
-            Matched <| MExpr(name, v)
+        let exit_task =
+            match parser with
+            | Rewrite _ -> 
+                let inline exit_task v = 
+                    Matched v
+                exit_task
+            | _ ->
+                let inline exit_task v = 
+                    Matched <| MExpr(name, v)
+                exit_task
+
         if state.contains name then
             Log <| fun() -> sprintf "state contains %A" name
             if state.lr <> None then
@@ -257,7 +326,7 @@ let rec parse (self : 't parser)
                 else ()
                 Unmatched
             | Matched v ->
-                nested.Add v
+                merge_nested nested v
                 loop is_lr nested left
             | LR(_, stack') ->
             if is_lr then Unmatched
@@ -267,7 +336,7 @@ let rec parse (self : 't parser)
                 match stack' ast with
                 | Unmatched | LR _ -> Unmatched
                 | Matched v        ->
-                nested'.Add v
+                merge_nested nested' v
                 loop true nested' left
             LR(self, stack)
         loop false nested ands
@@ -304,17 +373,13 @@ let rec parse (self : 't parser)
                 else
                     lr <- Some((pobj, stack'))
                     FINDLR
-            | Matched (Nested lst) ->
-                nested.AddRange(lst)
-                CONTINUE
-
-            | Matched it ->
-                nested.Add(it)
+            | Matched v ->
+                merge_nested nested v
                 CONTINUE
             
         let rec loop_lr nested times = 
             match foreach nested times with 
-            | x when x = CONTINUE    -> loop_lr nested times 
+            | x when x = CONTINUE    -> loop_lr nested <| times + 1
             | x when x = FINISH      -> Matched <| Nested nested 
             | x when x = FINDLR ||  x = FAIL -> Unmatched
             | _           -> failwith "Lack of DT"
@@ -338,31 +403,9 @@ let rec parse (self : 't parser)
                         else 
                         Matched <| Nested nested 
                     | Matched v ->
-                    match v with
-                    | Nested lst -> nested.AddRange(lst)
-                    | _          -> nested.Add v 
+                    merge_nested nested v
                     loop_lr nested <| times + 1
                 LR(pobj, stack)
             | _ -> failwith "Lack of DT"
 
-        loop_no_lr nested 0 
-
-
-//match lit with
-//            | Any     -> true
-//            | C c_str -> c_str &= token.value
-//            | N name  -> name  &= token.name
-//            | V value -> value = token.value
-//            | NC(name, c_str) -> name &= token.name && c_str &= token.value
-//let C string = cast string |> C |> Literal 
-//let V string = string |> V |> Literal 
-//let NC name string = NC(cast <| name, cast <| string) |> Literal 
-//let N name         = N(cast <| name) |> Literal
-
-
-//let And ands = ands |> And |> Composed 
-//let Or  ors  = ors |> Or |> Composed 
-//let Rep at_least at_most parser = Rep(at_least, at_most, parser) |> Composed 
-//let Bind name parser = Bind(name, parser) |> Atom 
-//let Push name parser = Push(name, parser) |> Atom 
-//let Named name = Named(name) |> Atom 
+        loop_no_lr nested 0

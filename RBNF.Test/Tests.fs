@@ -18,6 +18,11 @@ let def_token str_lst =
        (fun str ->
             {filename = ""; value = str ; name = "const" ; colno = 1; lineno = 1; offset = 1;})
 
+
+type Expr =
+| Add of Expr * Expr
+| Sym of string
+
 type MyTests(output:ITestOutputHelper) =
 
     [<Fact>]
@@ -30,7 +35,8 @@ type MyTests(output:ITestOutputHelper) =
         let node_impl = Or [And [node; v1]; v2]
         let tokens = def_token ["234"; "123"; "123"]
         let state = State<string>.inst()
-        state.lang.[node_name] <- node_impl
+        let (:=) = state.implement 
+        node := node_impl
         parse node tokens state |> sprintf "%A" |> output.WriteLine
         0
 
@@ -45,12 +51,12 @@ type MyTests(output:ITestOutputHelper) =
 
         let node_impl = Or [And [mid; v2]; v1]
         let mid_impl = And [node; v3]
-
         let tokens = def_token ["a"; "c"; "b"; "c"; "b"]
 
         let state: State<string> = State<string>.inst()
-        state.lang.["node"] <- node_impl
-        state.lang.["mid"]  <- mid_impl
+        let (:=) = state.implement
+        node := node_impl
+        mid  := mid_impl
         let raise' b = Assert.True(false, b)
 
         match parse node tokens state with
@@ -94,7 +100,8 @@ type MyTests(output:ITestOutputHelper) =
                 "abs"
             ]
         let state = State<string>.inst()
-        state.lang.[plus_name] <- plus_impl
+        let (:=) = state.implement
+        plus := plus_impl
         parse plus tokens state |> sprintf "%A" |> output.WriteLine
 
         0
@@ -126,4 +133,55 @@ type MyTests(output:ITestOutputHelper) =
         |> List.ofSeq
         |> sprintf "%A"
         |> output.WriteLine
+        0
+
+    [<Fact>]
+    member __.``rewrite add``() =
+        let identifier = V "abs"
+        let plus_operator = V "+"
+        let plus_name = "plus"
+        let plus = Named plus_name
+        let tokens = 
+            def_token <| 
+            [
+                "abs"
+                "+"
+                "abs"
+                "+"
+                "abs"
+                "+"
+                "abs"
+                "+"
+                "abs"
+                "+"
+                "abs"
+            ]
+        let state = State<Expr>.inst()
+        
+        let (:=) = state.implement
+        let identifier = 
+            identifier =>
+            fun state ->
+            function
+            | Token it -> Value <| Sym(it.value)
+            | _ as it -> failwithf "%A" it
+
+        plus := Or
+                [ 
+                    And [plus; plus_operator; identifier]
+                    identifier
+                ]
+                =>
+                fun state ast ->
+                match ast with
+                | Nested arr ->
+                    let (Value l) = arr.[0]
+                    let (Value r) = arr.[2]
+                    Add(l, r) |> Value
+                | _ -> ast
+        
+        sprintf "%A" state.lang.["plus"] |> output.WriteLine
+
+        parse plus tokens state |> sprintf "%A" |> output.WriteLine
+
         0

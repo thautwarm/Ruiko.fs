@@ -34,3 +34,10 @@ let NV name value =
     let name   = CachingPool.cast name
     fun (token: Token) -> token.name &= name && token.value = value
     |> Literal
+
+type 't state with
+    member this.implement (named: 't parser) (parser : 't parser) = 
+        match named with
+        | Named name -> 
+            this.lang.[name] <- parser 
+        | _ -> failwith "Only named parser can be implemented."

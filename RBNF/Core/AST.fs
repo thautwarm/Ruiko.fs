@@ -25,3 +25,12 @@ let push'(ctx : (string, 'T AST) hashmap)(k: string) (value: 'T AST) =
         let (Nested lst) = n // only one pattern here
         in
         lst.Add(value)
+   
+let merge_nested (nested: 'T AST arraylist) = 
+    function
+    | Nested arr ->
+        nested.AddRange arr
+    | it ->
+    nested.Add it
+
+        
