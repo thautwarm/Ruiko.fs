@@ -25,12 +25,17 @@ let mutable _log_started = false
 
 
 
-//let inline Log app = 
-//    let msg = app()
-//    if _log_started then
+let inline Log app =
+#if DEBUG 
+    let msg = app()
+    if _log_started then
 
-//        System.IO.File.AppendAllText("../r_log", msg + "\n")
-//    else 
-//        _log_started <- true
-//        System.IO.File.WriteAllText("../r_log", msg + "\n")
+        System.IO.File.AppendAllText("../r_log", msg + "\n")
+    else 
+        _log_started <- true
+        System.IO.File.WriteAllText("../r_log", msg + "\n")
+#else
+    ()
+#endif
+
     
