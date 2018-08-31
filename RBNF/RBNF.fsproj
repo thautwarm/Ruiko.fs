@@ -16,21 +16,16 @@
   
     
   <ItemGroup>
-    
-    
-    
-    
-    
-    
-    
     <Compile Include="Infras.fs" />
-    <Compile Include="Core\CachingPool.fs" />
-    <Compile Include="Core\AST.fs" />
-    <Compile Include="AutoLexer\Lexer.fs" />
+    <Compile Include="Core\caching_pool.fs" />
+    <Compile Include="Core\ast.fs" />
+    <Compile Include="AutoLexer\lexer.fs" />
+    
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="Core\ParserC.fs" />
+    <Compile Include="Core\parserc.fs" />
+    <Compile Include="AutoLexer\analyse.fs" />
     <Compile Include="Operator.fs" />
   </ItemGroup>
 

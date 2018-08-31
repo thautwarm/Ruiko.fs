@@ -3,12 +3,18 @@ open RBNF.Infras
 open RBNF.AST
 open Ruikowa.CSharp
 open System
+open RBNF.Lexer
+
+type literal = {
+    test  : Token -> bool
+    lexer : (unit -> lexer) option
+}
 
 type 't parser =
     | Predicate of ('t state -> bool)
     | Rewrite   of  't parser * 't rewrite
     (**literal*)
-    | Literal   of (Token -> bool)
+    | Literal   of literal
     | Any
     (**atom*)
     | Bind  of string * 't parser
@@ -178,7 +184,7 @@ let rec parse (self : 't parser)
         else
         let token = tokens.[idx]
         in
-        if lit token then
+        if lit.test token then
             state.new_one() |> ignore
             Matched(Token token)
         else 
