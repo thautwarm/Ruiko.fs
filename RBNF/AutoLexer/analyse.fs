@@ -9,12 +9,33 @@ type bound_name_descriptor = {
 
 type analysis = {
     bounds   : bound_name_descriptor Set
-    lexer_tb : lexer list
+    lexer_tb : lexer array
 }
 
-let merge_lexer_tb tb lexer: lexer list = failwith ""
-let merge_lexer_tbs (tb1: lexer list) (tb2: lexer list): lexer list =
-    List.fold (fun a b -> merge_lexer_tb a b) tb1 tb2
+let mergeable = function
+    | StringFactor _, StringFactor _ -> true
+    | _ -> false
+
+let merge_lexer_tb (tb: lexer array) (lexer: lexer): lexer array =
+    Array.tryFindIndexBack
+    <| fun (it: lexer)  -> it.name = lexer.name && mergeable(it.factor, lexer.factor)
+    <| tb 
+    |>
+    function
+    | None ->
+        Array.append tb [|lexer|]
+
+    | Some i ->
+    let var = 
+        match tb.[i], lexer with
+        | {name=name;factor = StringFactor ls}, {factor = StringFactor rs}-> 
+            {name=name; factor = StringFactor <| List.append ls rs }
+        | _ -> failwith "impossible"
+    tb.[i] <- var
+    tb
+    
+let merge_lexer_tbs (tb1: lexer array) (tb2: lexer array): lexer array =
+    Array.fold (fun a b -> merge_lexer_tb a b) tb1 tb2
 
 let rec analyse (analysis: analysis) (lang: (string, 't parser) Map) =
     let rec proc analysis parser =
