@@ -4,8 +4,8 @@ open System
 open Xunit
 open RBNF.Infras
 open RBNF.AST
-open RBNF.State
 open RBNF.ParserC
+open RBNF.Operator
 open RBNF.Lexer
 open Xunit.Abstractions
 open RBNF
@@ -16,28 +16,22 @@ let def_token str_lst =
     |> Array.ofList
     |> Array.map
        (fun str ->
-            {filename = ""; value = str ; name = "const" ; colno = 1; lineno = 1})
+            {filename = ""; value = str ; name = "const" ; colno = 1; lineno = 1; offset = 1;})
 
 type MyTests(output:ITestOutputHelper) =
 
     [<Fact>]
     member __.``Direct Left Recursion`` () =
 
-        let v1 = V("123")
-        let v2 = V("234")
-
+        let v1 = V "123"
+        let v2 = V "234"
         let node_name = "node"
-        let node = Named(node_name)
-
-        let node_impl = Or([And([node; v1]); v2])
-
+        let node = Named node_name
+        let node_impl = Or [And [node; v1]; v2]
         let tokens = def_token ["234"; "123"; "123"]
-        let take_or = Or([And([v2; v1]); v2])
-
         let state = State<string>.inst()
-        state.lang.[node_name] <- GuardRewriter<string>.wrap(node_impl)
+        state.lang.[node_name] <- node_impl
         parse node tokens state |> sprintf "%A" |> output.WriteLine
-
         0
 
     [<Fact>]
@@ -49,14 +43,14 @@ type MyTests(output:ITestOutputHelper) =
         let node = Named("node")
         let mid = Named("mid")
 
-        let node_imp = Or [And [mid; v2]; v1]
-        let mid_imp = And [node; v3]
+        let node_impl = Or [And [mid; v2]; v1]
+        let mid_impl = And [node; v3]
 
         let tokens = def_token ["a"; "c"; "b"; "c"; "b"]
 
         let state: State<string> = State<string>.inst()
-        state.lang.["node"] <- GuardRewriter<string>.wrap(node_imp)
-        state.lang.["mid"]  <- GuardRewriter<string>.wrap(mid_imp)
+        state.lang.["node"] <- node_impl
+        state.lang.["mid"]  <- mid_impl
         let raise' b = Assert.True(false, b)
 
         match parse node tokens state with
@@ -84,9 +78,23 @@ type MyTests(output:ITestOutputHelper) =
         let plus = Named plus_name
         let plus_impl = Or [And [plus; plus_operator; identifier]; identifier]
 
-        let tokens = def_token ["abs"; "+"; "abs"; "+"; "abs"; "+"; "abs"; "+"; "abs"; "+"; "abs"]
+        let tokens = 
+            def_token <| 
+            [
+                "abs"
+                "+"
+                "abs"
+                "+"
+                "abs"
+                "+"
+                "abs"
+                "+"
+                "abs"
+                "+"
+                "abs"
+            ]
         let state = State<string>.inst()
-        state.lang.[plus_name] <- GuardRewriter<string>.wrap plus_impl
+        state.lang.[plus_name] <- plus_impl
         parse plus tokens state |> sprintf "%A" |> output.WriteLine
 
         0

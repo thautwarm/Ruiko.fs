@@ -10,20 +10,20 @@ type lexer_factor =
     | StringFactor of string list
 
 type string_view = {
-    value  : string
+    ref    : string
     offset : int
 }
 
 let lexer_factor_match str_view =
     function
     | RegexFactor r ->
-        let r = r.Match(str_view.value, str_view.offset)
+        let r = r.Match(str_view.ref, str_view.offset)
         if r.Success then r.Value |> Some
         else None
     | StringFactor ss ->
         List.tryFind
         <| fun it ->
-            StrUtils.StartsWithAt(str_view.value, it, str_view.offset)
+            StrUtils.StartsWithAt(str_view.ref, it, str_view.offset)
         <| ss
 
 type lexer_matcher = string_view -> string option
@@ -69,7 +69,7 @@ type cast_map = (string, string) Map
 let lex (cast_map: cast_map option)
         (lexer_table: lexer_table)
         (src: source) =
-    let view = {value = src.text; offset = 0}
+    let view = {ref = src.text; offset = 0}
     let n = src.text.Length
     let mutable lineno = 0
     let mutable colno  = 0
@@ -78,7 +78,7 @@ let lex (cast_map: cast_map option)
     | None ->
         let rec loop view = seq{
             match view with
-            | {offset = offset} when offset = n ->
+            | {ref = _; offset = offset} when offset = n ->
                 ()
             | _ ->
             let picked = 
@@ -91,11 +91,19 @@ let lex (cast_map: cast_map option)
                 <| lexer_table
             match picked with 
             | None ->
-                let {value = value; offset = offset} = view
+                let {ref = value; offset = offset;}: string_view = view
                 let sample = value.Substring(offset, offset + 15)
                 failwithf "unknown string head: `%s` at line %d, column %d, file %s" 
                             sample lineno colno filename
             | Some (name, word) ->
+                yield {
+                        name = CachingPool.cast name
+                        value = word
+                        filename = filename
+                        colno = colno
+                        offset = view.offset
+                        lineno = lineno
+                      }
                 let word_len = String.length word
                 match StrUtils.StringCount(word, '\n') with
                 | 0 ->
@@ -103,22 +111,14 @@ let lex (cast_map: cast_map option)
                 | line_inc ->
                     lineno <- lineno + line_inc
                     colno  <- word_len - StrUtils.StringFindIndexRight(word, '\n') - 1
-
-                let token = {
-                            name = name
-                            value = word
-                            filename = filename
-                            colno = colno
-                            lineno = lineno
-                            }
-                yield token
+                
                 yield! loop({view with offset = view.offset + word_len})
             }
         in loop view
     | Some cast_map -> 
     let rec loop view = seq{
         match view with
-        | {offset = offset} when offset = n ->
+        | {ref = _; offset = offset} when offset = n ->
             ()
         | _ ->
         let picked = 
@@ -131,11 +131,23 @@ let lex (cast_map: cast_map option)
             <| lexer_table
         match picked with 
         | None ->
-            let {value = value; offset = offset} = view
+            let {ref = value; offset = offset} = view
             let sample = value.Substring(offset, offset + 15)
             failwithf "unknown string head: `%s` at line %d, column %d, file %s" 
                         sample lineno colno filename
         | Some (name, word) ->
+            let tk_name, tk_word = 
+                match Map.tryFind word cast_map with
+                | None      -> CachingPool.cast name, word 
+                | Some name -> CachingPool.cast name, CachingPool.cast word
+            yield  {
+                    name = tk_name
+                    value = tk_word
+                    offset = view.offset
+                    filename = filename
+                    colno = colno
+                    lineno = lineno
+                   }
             let word_len = String.length word
             match StrUtils.StringCount(word, '\n') with
             | 0 ->
@@ -143,20 +155,6 @@ let lex (cast_map: cast_map option)
             | line_inc ->
                 lineno <- lineno + line_inc
                 colno  <- word_len - StrUtils.StringFindIndexRight(word, '\n') - 1
-            
-            let name, word = 
-                match Map.tryFind word cast_map with
-                | None      -> name, word 
-                | Some name -> name, CachingPool.cast word
-            
-            let token = {
-                        name = name
-                        value = word
-                        filename = filename
-                        colno = colno
-                        lineno = lineno
-                        }
-            yield token
             yield! loop({view with offset = view.offset + word_len})
         }
     in loop view

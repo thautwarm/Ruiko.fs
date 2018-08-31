@@ -5,6 +5,7 @@ type Token = {
     filename : string
     lineno   : int
     colno    : int
+    offset   : int
     name     : string
     value    : string
 }
