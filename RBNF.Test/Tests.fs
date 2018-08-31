@@ -139,26 +139,8 @@ type MyTests(output:ITestOutputHelper) =
 
     [<Fact>]
     member __.``rewrite add``() =
-        let plus = Named "plus"
-        let tokens =
-
-            [
-                "abs"
-                "+"
-                "abs"
-                "+"
-                "abs"
-                "+"
-                "abs"
-                "+"
-                "abs"
-                "+"
-                "abs"
-            ]
-            |> List.map cast
-            |> def_token
-
         let state = State<Expr>.inst()
+        let plus = Named "plus"
 
         let (:=) = state.implement
         let identifier =
@@ -181,17 +163,9 @@ type MyTests(output:ITestOutputHelper) =
                     let (Value r) = arr.[2]
                     Add(l, r) |> Value
                 | _ -> ast
-
-        sprintf "%A" state.lang.["plus"] |> output.WriteLine
         let a, b = analyse analysis.crate state.lang
 
         let tokens = lex None (Array.toList b) {filename=""; text="abs+abs+abs"} |> Array.ofSeq
-
-        //Array.map
-        //<| fun each -> each.value &= cast each.value
-        //<| tokens
-        //|> sprintf "%A"
-        //|> output.WriteLine
 
         parse plus tokens state |> sprintf "%A" |> output.WriteLine
 
