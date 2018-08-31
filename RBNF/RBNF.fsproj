@@ -26,7 +26,7 @@
   <ItemGroup>
     <Compile Include="Core\parserc.fs" />
     <Compile Include="AutoLexer\analyse.fs" />
-    <Compile Include="Operator.fs" />
+    <Compile Include="operator.fs" />
   </ItemGroup>
 
   <ItemGroup>

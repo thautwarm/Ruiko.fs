@@ -3,6 +3,7 @@ open RBNF.Infras
 open RBNF.AST
 open RBNF.ParserC
 open RBNF.Lexer
+open System.Text.RegularExpressions
 
 //match lit with
 //        | Any     -> true
@@ -13,7 +14,7 @@ open RBNF.Lexer
 
 let C string =
     let string = CachingPool.cast string
-    {test  = fun (token: Token) -> token.name &= string
+    {test  = fun (token: Token) -> token.value &= string
      lexer = Some <| fun () -> {name = CachingPool.cast "auto_const"; factor = StringFactor [string]}}
     |> Literal
  
@@ -37,10 +38,21 @@ let NC name value =
 
 let NV name value =
     let name   = CachingPool.cast name
-    {test = fun (token: Token) -> token.name &= name && token.value = value
-     lexer = None}
+    {
+     test = fun (token: Token) -> token.name &= name && token.value = value
+     lexer = None
+    }
     |> Literal
 
+let R name regex =
+    let regex = Regex <| "\G" + regex
+    let name   = CachingPool.cast name
+    let factor = RegexFactor regex
+    {
+     test = fun (token: Token) -> token.name &= name
+     lexer = Some <| fun () -> {name = name; factor = factor}
+    }
+    |> Literal
 type 't state with
     member this.implement (named: 't parser) (parser : 't parser) = 
         match named with

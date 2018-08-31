@@ -1,6 +1,8 @@
 ﻿module RBNF.analyse
 open RBNF.ParserC
 open RBNF.Lexer
+open RBNF.Infras
+open System.Linq
 
 type bound_name_descriptor = {
     name   : string
@@ -10,10 +12,14 @@ type bound_name_descriptor = {
 type analysis = {
     bounds   : bound_name_descriptor Set
     lexer_tb : lexer array
-}
+    }
+    with
+    static member crate = {bounds = set []; lexer_tb = [||]}
+
 
 let mergeable = function
     | StringFactor _, StringFactor _ -> true
+    | RegexFactor l, RegexFactor r -> l.ToString() = r.ToString()
     | _ -> false
 
 let merge_lexer_tb (tb: lexer array) (lexer: lexer): lexer array =
@@ -29,15 +35,17 @@ let merge_lexer_tb (tb: lexer array) (lexer: lexer): lexer array =
     let var = 
         match tb.[i], lexer with
         | {name=name;factor = StringFactor ls}, {factor = StringFactor rs}-> 
-            {name=name; factor = StringFactor <| List.append ls rs }
+            {name=name; factor = StringFactor <| (List.distinct <| List.append ls rs)}
+        | {name = name; factor = RegexFactor _}, it -> it
         | _ -> failwith "impossible"
     tb.[i] <- var
     tb
     
 let merge_lexer_tbs (tb1: lexer array) (tb2: lexer array): lexer array =
-    Array.fold (fun a b -> merge_lexer_tb a b) tb1 tb2
+    Array.fold merge_lexer_tb tb1 tb2
 
-let rec analyse (analysis: analysis) (lang: (string, 't parser) Map) =
+let rec analyse (analysis: analysis) (lang: (string, 't parser) hashmap) =
+    let lang = seq{ for a in lang -> (a.Key, a.Value)} |> Map.ofSeq
     let rec proc analysis parser =
         match parser with
         | Literal {lexer = Some lexer} -> 
@@ -68,7 +76,8 @@ let rec analyse (analysis: analysis) (lang: (string, 't parser) Map) =
             proc analysis parser
 
         | Or(many) 
-        | And(many) -> List.fold proc analysis many
+        | And(many) ->
+            List.fold proc analysis many
         | _ -> analysis
     
     let bounds, lexer_tbs = 
@@ -78,7 +87,13 @@ let rec analyse (analysis: analysis) (lang: (string, 't parser) Map) =
                 yield (name, analysis.bounds), analysis.lexer_tb
         ] 
         |> List.unzip
-    Map.ofList bounds, List.reduce merge_lexer_tbs lexer_tbs
+    Map.ofList bounds, 
+    let fn (lexer : lexer) = 
+        match lexer with
+        | {factor = StringFactor lst;} -> 
+            {lexer with factor = StringFactor <| List.sortDescending lst}
+        | _ -> lexer
+    in List.reduce merge_lexer_tbs lexer_tbs |> Array.map fn
             
     
     

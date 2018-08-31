@@ -8,8 +8,10 @@ open RBNF.ParserC
 open RBNF.Operator
 open RBNF.Lexer
 open Xunit.Abstractions
-open RBNF
+open RBNF.analyse
+open RBNF.CachingPool
 open System.Text.RegularExpressions
+
 
 let def_token str_lst =
     str_lst
@@ -109,7 +111,7 @@ type MyTests(output:ITestOutputHelper) =
     [<Fact>]
     member __.``auto lexer preview``() =
         let factor = StringFactor ["123"; "aaa"; "*&^"]
-        let lexer_tb = [{factor = factor; name=CachingPool.cast "const"}]
+        let lexer_tb = [{factor = factor; name=cast "const"}]
         let cast_map = None
 
         lex cast_map lexer_tb {text = "123aaa*&^"; filename = "a.fs"}
@@ -125,8 +127,8 @@ type MyTests(output:ITestOutputHelper) =
         let identifier = RegexFactor identifier
         let space = RegexFactor space
         let lexer_tb = [
-            {factor = identifier; name = CachingPool.cast "regex"}
-            {factor = space     ; name = CachingPool.cast "space"}
+            {factor = identifier; name = cast "regex"}
+            {factor = space     ; name = cast "space"}
         ]
         let cast_map = None
         lex cast_map lexer_tb  {text = "I am the bone of my sword"; filename = "a.fs"}
@@ -137,12 +139,9 @@ type MyTests(output:ITestOutputHelper) =
 
     [<Fact>]
     member __.``rewrite add``() =
-        let identifier = V "abs"
-        let plus_operator = V "+"
-        let plus_name = "plus"
-        let plus = Named plus_name
+        let plus = Named "plus"
         let tokens = 
-            def_token <| 
+            
             [
                 "abs"
                 "+"
@@ -156,11 +155,14 @@ type MyTests(output:ITestOutputHelper) =
                 "+"
                 "abs"
             ]
+            |> List.map cast
+            |> def_token
+
         let state = State<Expr>.inst()
         
         let (:=) = state.implement
         let identifier = 
-            identifier =>
+            R "identifier" "[a-zA-Z_]{1}[a-zA-Z_0-9]*" =>
             fun state ->
             function
             | Token it -> Value <| Sym(it.value)
@@ -168,7 +170,7 @@ type MyTests(output:ITestOutputHelper) =
 
         plus := Or
                 [ 
-                    And [plus; plus_operator; identifier]
+                    And [plus;  C "+"; identifier]
                     identifier
                 ]
                 =>
@@ -181,7 +183,17 @@ type MyTests(output:ITestOutputHelper) =
                 | _ -> ast
         
         sprintf "%A" state.lang.["plus"] |> output.WriteLine
+        let a, b = analyse analysis.crate state.lang
+        
+        let tokens = lex None (Array.toList b) {filename=""; text="abs+abs+abs"} |> Array.ofSeq
+
+        //Array.map 
+        //<| fun each -> each.value &= cast each.value 
+        //<| tokens
+        //|> sprintf "%A" 
+        //|> output.WriteLine
 
         parse plus tokens state |> sprintf "%A" |> output.WriteLine
 
+        sprintf "%A \n %A" a b |> output.WriteLine
         0

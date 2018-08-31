@@ -14,6 +14,7 @@ type string_view = {
     offset : int
 }
 
+
 let lexer_factor_match str_view =
     function
     | RegexFactor r ->
@@ -157,6 +158,16 @@ let lex (cast_map: cast_map option)
                 colno  <- word_len - StrUtils.StringFindIndexRight(word, '\n') - 1
             yield! loop({view with offset = view.offset + word_len})
         }
+    
     in loop view
 
     
+
+let lexer_tb_to_const lexer_tb = 
+    [
+        for each in lexer_tb ->
+        match each with
+        |{factor = StringFactor lst; name = name} ->
+            {name = CachingPool.cast name; factor = StringFactor <| List.map CachingPool.cast lst}
+        | {name = name} -> {each with name = CachingPool.cast name}
+    ]
