@@ -44,8 +44,7 @@ let merge_lexer_tb (tb: lexer array) (lexer: lexer): lexer array =
 let merge_lexer_tbs (tb1: lexer array) (tb2: lexer array): lexer array =
     Array.fold merge_lexer_tb tb1 tb2
 
-let rec analyse (analysis: analysis) (lang: (string, 't parser) hashmap) =
-    let lang = seq{ for a in lang -> (a.Key, a.Value)} |> Map.ofSeq
+let rec analyse (analysis: analysis) (lang: (string * 't parser) list) =
     let rec proc analysis parser =
         match parser with
         | Literal {lexer = Some lexer} ->
@@ -82,7 +81,7 @@ let rec analyse (analysis: analysis) (lang: (string, 't parser) hashmap) =
 
     let bounds, lexer_tbs =
         [
-            for (name, parser) in Map.toList lang do
+            for (name, parser) in lang do
                 let analysis = proc analysis parser
                 yield (name, analysis.bounds), analysis.lexer_tb
         ]
@@ -93,4 +92,4 @@ let rec analyse (analysis: analysis) (lang: (string, 't parser) hashmap) =
         | {factor = StringFactor lst;} ->
             {lexer with factor = StringFactor <| List.sortDescending lst}
         | _ -> lexer
-    in List.reduce merge_lexer_tbs lexer_tbs |> Array.map fn
+    in List.reduce merge_lexer_tbs lexer_tbs |> Array.map fn |> Array.toList

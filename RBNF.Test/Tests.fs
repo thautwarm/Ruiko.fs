@@ -20,6 +20,9 @@ let def_token str_lst =
        (fun str ->
             {filename = ""; value = str ; name = "const" ; colno = 1; lineno = 1; offset = 1;})
 
+type sexpr =
+| Term of string
+| S    of sexpr list
 
 type Expr =
 | Add of Expr * Expr
@@ -152,7 +155,7 @@ type MyTests(output:ITestOutputHelper) =
 
         plus := Or
                 [
-                    And [plus;  C "+"; identifier]
+                    And [plus.bind_to("emm");  C "+"; identifier]
                     identifier
                 ]
                 =>
@@ -163,11 +166,57 @@ type MyTests(output:ITestOutputHelper) =
                     let (Value r) = arr.[2]
                     Add(l, r) |> Value
                 | _ -> ast
-        let a, b = analyse analysis.crate state.lang
+        let a, b = analyse analysis.crate [for each in ["plus"] -> each, state.lang.[each]]
 
-        let tokens = lex None (Array.toList b) {filename=""; text="abs+abs+abs"} |> Array.ofSeq
+
+        let tokens = lex None b {filename=""; text="abs+abs+abs"} |> Array.ofSeq
 
         parse plus tokens state |> sprintf "%A" |> output.WriteLine
 
         sprintf "%A \n %A" a b |> output.WriteLine
+        0
+    [<Fact>]
+    member __.``lisp``() =
+        let term = R "term" "[^\(\)\:\s]+" =>
+                   fun state ast ->
+                   match ast with
+                   | Token tk -> Value <| Term tk.value
+                   | _ -> failwith "emmm"
+
+        let space = R "space" "\s+"
+        let sexpr = Named "sexpr"
+
+        let state = State<sexpr>.inst()
+        let (:=) = state.implement
+
+        Named "space" := space  (** only for building auto lexer which contains `space` from grammar*)
+
+        sexpr := Or [And[C"("; Rep(0, -1, sexpr).bind_to("sexpr"); C")"]; term]
+                 =>
+                 fun state ast ->
+                 match state.ctx.TryGetValue "sexpr" with
+                 | (false, _) -> ast
+                 | (true, it) ->
+                 match it with
+                 | Nested lst ->
+                    Seq.map
+                    <| fun (Value it) -> it
+                    <| lst
+                    |> List.ofSeq
+                    |> S
+                    |> Value
+                 | _ -> failwith "emmm"
+
+
+
+        let bounds_map, lexer_factors =
+            analyse analysis.crate
+                    [for each in ["space";"sexpr";] -> each, state.lang.[each]]
+
+        let tokens = lex None lexer_factors {filename = ""; text = "(add 1 (mul 2 3))"}
+                     |> Seq.filter (fun it -> it.name <> "space")
+                     |> Array.ofSeq
+
+        let ast = parse sexpr tokens state
+        output.WriteLine <| sprintf "%A" ast
         0

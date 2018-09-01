@@ -16,6 +16,7 @@
   
     
   <ItemGroup>
+    
     <Compile Include="Infras.fs" />
     <Compile Include="Core\caching_pool.fs" />
     <Compile Include="Core\ast.fs" />
@@ -27,6 +28,9 @@
     <Compile Include="Core\parserc.fs" />
     <Compile Include="AutoLexer\analyse.fs" />
     <Compile Include="operator.fs" />
+  
+  
+    <Compile Include="Collections\Lisp\low_level_lisp.fs" />
   </ItemGroup>
 
   <ItemGroup>
