@@ -14,7 +14,11 @@ open System.Text.RegularExpressions
 
 let inline C string =
     let string = CachingPool.cast string
-    {test  = fun (token: Token) -> token.value &= string
+    {test  = fun (token: Token) -> 
+                
+                let res = token.value &= string
+                Log(fun () -> sprintf "literal C: %s == %s => %A" string token.value res)
+                res
      lexer = Some <| fun () -> {name = CachingPool.cast "auto_const"; factor = StringFactor [string]}}
     |> Literal
 

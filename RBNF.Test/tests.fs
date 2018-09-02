@@ -25,10 +25,17 @@ type sexpr =
 | S    of sexpr list
 | Empty_sexpr
 
-and Expr =
+type Expr =
 | Add of left: Expr * right: Expr
 | Sym of string
 | Empty_expr
+
+type RecurNode = 
+| Node1     of RecurNode * string
+| Node2     of RecurNode * string
+| Node3     of RecurNode * string
+| LitNode   of string 
+| Empty_recur_node
 
 
 type default_value = Default
@@ -57,19 +64,36 @@ type MyTests(output:ITestOutputHelper) =
         let v3 = C "c"
         let v4 = C "d"
         
-        let node1 = Named("node1", fun () -> Default)
-        let node2 = Named("node2", fun () -> Default)
-        let node3 = Named("node3", fun () -> Default)
+        let node1 = Named("node1", fun () -> Node1(Empty_recur_node, ""))
+        let node2 = Named("node2", fun () -> Node2(Empty_recur_node, ""))
+        let node3 = Named("node3", fun () -> Node3(Empty_recur_node, ""))
 
-        let state = State<default_value>.inst(Default)
+        let state = State<RecurNode>.inst()
         let (:=) = state.implement
 
-        node1 := Or [And [node1; v1]; node2]
-        node2 := Or [And [node2; v2]; node3]
-        node3 := Or [And [node3; v3]; v4]
+        node1 := Or [And [
+                           node1 % fun (Node1(_, r)) (Value it) -> Node1(it, r)
+                           v1    % fun (Node1(l, _)) (Token it) -> Node1(l, it.value)
+                         ]
+                     node2 % fun _ (Value it) -> it
+                    ] => fun state _ -> state.context |> Value
+
+        node2 := Or [And [
+                          node2 % fun (Node2(_, r)) (Value it) -> Node2(it, r)
+                          v2    % fun (Node2(l, _)) (Token it) -> Node2(l, it.value)
+                          ]
+                     node3 % fun _ (Value it) -> it
+                    ] => fun state _ -> state.context |> Value
+        
+        
+        node3 := Or [And [node3 % fun (Node3(_, r)) (Value it) -> Node3(it, r) 
+                          v3    % fun (Node3(l, _)) (Token it) -> Node3(l, it.value)
+                          ]; 
+                     v4    % fun _ (Token t) -> LitNode t.value
+                     ] => fun state _ -> state.context |> Value
         
         let lexer_tb = analyse [v1; v2; v3; v4]
-        let tokens = lex None lexer_tb {filename = ""; text = "daaaa"} |> Array.ofSeq
+        let tokens = lex None lexer_tb {filename = ""; text = "dccbaaa"} |> Array.ofSeq
         parse node1 tokens state |> sprintf "%A" |> output.WriteLine
         0
 
@@ -114,8 +138,17 @@ type MyTests(output:ITestOutputHelper) =
         let identifier = V "abs"
         let plus_operator = V "+"
         let plus_name = "plus"
-        let plus = Named(plus_name, fun () -> Default)
-        let plus_impl = Or [And [plus; plus_operator; identifier]; identifier]
+        let top = Add(Empty_expr, Empty_expr)
+        let plus = Named(plus_name, fun () -> top)
+        let plus_impl = 
+            Or [
+                And [
+                    plus % fun (Add(_, r)) (Value l) -> Add(l, r)
+                    plus_operator; 
+                    identifier % fun (Add(l, _)) (Token it) -> Add(l, Sym(it.value))
+                    ]
+                identifier % fun _ (Token it) ->  Sym(it.value)
+            ] => fun state _ -> Value <| state.context
 
         let tokens =
             def_token <|
@@ -132,7 +165,7 @@ type MyTests(output:ITestOutputHelper) =
                 "+"
                 "abs"
             ]
-        let state = State<default_value>.inst(Default)
+        let state = State<Expr>.inst(top)
         let (:=) = state.implement
         plus := plus_impl
         parse plus tokens state |> sprintf "%A" |> output.WriteLine
@@ -188,7 +221,7 @@ type MyTests(output:ITestOutputHelper) =
                     ]
                     identifier 
                         % fun _ (Token it) -> Sym(it.value)
-                ] => fun state -> state.context |> Value
+                ] => fun state _ -> state.context |> Value
 
         let lexer_tb = analyse [for each in ["plus"] -> state.lang.[each]]
 
@@ -221,7 +254,7 @@ type MyTests(output:ITestOutputHelper) =
                         C")"
                     ]
                     term % fun _ (Token it) -> Term(it.value)
-                ] => fun state -> Value <| state.context
+                ] => fun state _ -> Value <| state.context
 
         let lexer_factors =
             analyse [R "space" "\s+"; state.lang.["sexpr"]]
