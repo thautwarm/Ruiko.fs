@@ -12,31 +12,31 @@ open System.Text.RegularExpressions
 //        | V value -> value = token.value
 //        | NC(name, c_str) -> name &= token.name && c_str &= token.value
 
-let C string =
+let inline C string =
     let string = CachingPool.cast string
     {test  = fun (token: Token) -> token.value &= string
      lexer = Some <| fun () -> {name = CachingPool.cast "auto_const"; factor = StringFactor [string]}}
     |> Literal
 
-let N name =
+let inline N name =
     let name = CachingPool.cast name
     {test  = fun (token: Token) -> token.name &= name
      lexer = None}
     |> Literal
 
-let V value =
+let inline V value =
     {test = fun (token: Token) -> token.value = value
      lexer = None}
     |> Literal
 
-let NC name value =
+let inline NC name value =
     let value = CachingPool.cast value
     let name   = CachingPool.cast name
     {test = fun (token: Token) -> token.name &= name && token.value &= value
      lexer = Some <| fun () -> {name = name; factor = StringFactor [value]}}
     |> Literal
 
-let NV name value =
+let inline NV name value =
     let name   = CachingPool.cast name
     {
      test = fun (token: Token) -> token.name &= name && token.value = value
@@ -44,7 +44,7 @@ let NV name value =
     }
     |> Literal
 
-let R name regex =
+let inline R name regex =
     let regex = Regex <| "\G" + regex
     let name   = CachingPool.cast name
     let factor = RegexFactor regex
@@ -53,9 +53,10 @@ let R name regex =
      lexer = Some <| fun () -> {name = name; factor = factor}
     }
     |> Literal
+
 type 't state with
-    member this.implement (named: 't parser) (parser : 't parser) =
+    member inline this.implement (named: 't parser) (parser : 't parser) =
         match named with
-        | Named name ->
+        | Named(name, _) ->
             this.lang.[name] <- parser
         | _ -> failwith "Only named parser can be implemented."

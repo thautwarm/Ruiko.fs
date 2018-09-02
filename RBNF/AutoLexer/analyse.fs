@@ -1,20 +1,7 @@
 ﻿module RBNF.analyse
 open RBNF.ParserC
 open RBNF.Lexer
-open RBNF.Infras
-open System.Linq
 
-type bound_name_descriptor = {
-    name   : string
-    is_lst : bool
-}
-
-type analysis = {
-    bounds   : bound_name_descriptor Set
-    lexer_tb : lexer array
-    }
-    with
-    static member crate = {bounds = set []; lexer_tb = [||]}
 
 
 let mergeable = function
@@ -44,49 +31,24 @@ let merge_lexer_tb (tb: lexer array) (lexer: lexer): lexer array =
 let merge_lexer_tbs (tb1: lexer array) (tb2: lexer array): lexer array =
     Array.fold merge_lexer_tb tb1 tb2
 
-let rec analyse (analysis: analysis) (lang: (string * 't parser) list) =
+let rec inline analyse (parsers: 't parser list) =
     let rec proc analysis parser =
         match parser with
         | Literal {lexer = Some lexer} ->
             let lexer = lexer()
-            {analysis with lexer_tb = merge_lexer_tb analysis.lexer_tb lexer}
+            merge_lexer_tb analysis lexer
 
         | AnyNot(parser)
         | Rewrite(parser, _)
+        | Lens(_, parser)
         | Rep(_, _, parser) -> proc analysis parser
-        | Bind(varname, parser) ->
-            let record =  {name = varname; is_lst=false}
-            let analysis =
-                match Set.contains record analysis.bounds with
-                | false ->
-                    {analysis with bounds =  analysis.bounds.Add record}
-                | true ->
-                    analysis
-            proc analysis parser
-
-        | Push(varname, parser) ->
-            let record =  {name = varname; is_lst=true}
-            let analysis =
-                match Set.contains record analysis.bounds with
-                | false ->
-                    {analysis with bounds =  analysis.bounds.Add record}
-                | true ->
-                    analysis
-            proc analysis parser
 
         | Or(many)
         | And(many) ->
             List.fold proc analysis many
         | _ -> analysis
 
-    let bounds, lexer_tbs =
-        [
-            for (name, parser) in lang do
-                let analysis = proc analysis parser
-                yield (name, analysis.bounds), analysis.lexer_tb
-        ]
-        |> List.unzip
-    Map.ofList bounds,
+    let lexer_tbs = List.map (proc [||]) parsers
     let fn (lexer : lexer) =
         match lexer with
         | {factor = StringFactor lst;} ->

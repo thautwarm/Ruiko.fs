@@ -19,11 +19,7 @@ let Return (a: 'a) : 'a M =
 let (&=) a b =
     obj.ReferenceEquals(a, b)
 
-
 let mutable _log_started = false
-
-
-
 
 let inline Log app =
 #if DEBUG

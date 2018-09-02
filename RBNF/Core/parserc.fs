@@ -17,9 +17,8 @@ type 't parser =
     | Literal   of literal
     | Any
     (**atom*)
-    | Bind  of string * 't parser
-    | Push  of string * 't parser
-    | Named of string
+    | Lens  of ('t -> 't AST -> 't) * parser<'t>
+    | Named of string * (unit -> 't)
 
     (** composed *)
     | And    of 't parser list
@@ -28,19 +27,13 @@ type 't parser =
     // | Jump   of (string, Parser) Map
     | AnyNot of 't parser
 
-    static member (=>) (this, fn) =
+    static member inline (=>) (this, fn) =
         Rewrite(this, fn)
 
-    member this.push_to(name) =
-        Push(name, this)
-
-    member this.bind_to(name) =
-        Bind(name, this)
-
-    static member (!) this =
+    static member inline (!) this =
         AnyNot this
 
-    member this.otherwise(other) =
+    member inline this.otherwise(other) =
         match this with
         | Or this ->
             match other with
@@ -52,10 +45,10 @@ type 't parser =
             | _        -> [this; other]
         |> Or
 
-    static member (|||) (this: 't parser, other) =
+    static member inline (|||) (this: 't parser, other) =
         this.otherwise(other)
 
-    member this.next_by(other) =
+    member inline this.next_by(other) =
         match this with
         | And this ->
             match other with
@@ -67,22 +60,18 @@ type 't parser =
             | _        -> [this; other]
         |> And
 
-    static member (?) (this) =
+    static member inline(?) (this) =
         Rep(0, 1, this)
 
-    member this.repeat(at_least: int) = Rep(at_least, -1, this)
+    member inline this.repeat(at_least: int) = Rep(at_least, -1, this)
 
-    member this.repeat(at_least: int, at_most: int) = Rep(at_least, at_most, this)
+    member inline this.repeat(at_least: int, at_most: int) = Rep(at_least, at_most, this)
 
-    member this.join(p: 't parser) =
+    member inline this.join(p: 't parser) =
         ()
 
-    member this.Item
+    member inline this.Item
         with get(at_least: int, at_most: int) = Rep(at_least, at_most, this)
-
-
-
-
 
 
 
@@ -90,45 +79,55 @@ and 't rewrite = 't state -> 't AST -> 't AST
 
 and 't state = {
     mutable lr    : string option
-    mutable ctx   : (string, 't AST) hashmap
+    mutable ctx   : 't
     trace : string Trace Trace
     lang  : (string, 't parser) hashmap
     }
     with
-    static member inst(): 't state =
+    static member inline inst(top: 't): 't state =
         let trace = Trace()
         trace.Append(Trace())
         {
             lr = None
-            ctx = hashmap()
+            ctx = top
+            trace = trace
+            lang = hashmap()
+        }
+    
+    static member inline inst(): 't state =
+        let trace = Trace()
+        trace.Append(Trace())
+        {
+            lr = None
+            ctx = Unchecked.defaultof<'t>
             trace = trace
             lang = hashmap()
         }
 
-    member this.end_index with get() = this.trace.EndIndex
-    member this.max_fetched with get() = this.trace.MaxFetched
-    member this.current with get () = this.trace.[this.trace.EndIndex]
-    member this.reset(history) =
+    member inline this.end_index with get() = this.trace.EndIndex
+    member inline this.max_fetched with get() = this.trace.MaxFetched
+    member inline this.current with get () = this.trace.[this.trace.EndIndex]
+    member inline this.reset(history) =
             let (base', branch, ctx) = history
             this.ctx <- ctx
             this.trace.Reset(base')
             this.current.Reset(branch)
 
-    member this.new_one() =
+    member inline this.new_one() =
         if this.trace.Inc(fun () -> Trace<string>()) = false then
             this.current.Clear()
         else
             ()
 
-    member this.append(e : string) =
+    member inline this.append(e : string) =
         this.current.Append(e)
-    member this.commit() =
+    member inline this.commit() =
         (this.trace.Commit(), this.current.Commit(), this.ctx)
 
-    member this.contains(record : string) =
+    member inline this.contains(record : string) =
         this.current.Contains(record)
 
-    static member left_recur (self : 't state) (lr_name : string) (fn : 't state -> 'r) : 'r =
+    static member inline left_recur (self : 't state) (lr_name : string) (fn : 't state -> 'r) : 'r =
         Log(fun() -> sprintf "start lr for %A" lr_name)
         self.lr <- Some lr_name
         let ret = fn(self)
@@ -136,7 +135,7 @@ and 't state = {
         Log(fun () -> sprintf "end lr for %A" lr_name)
         ret
 
-    static member with_context_recovery (self: 't state) (fn: 't state -> 'r): 'r =
+    static member inline with_context_recovery (self: 't state) (fn: 't state -> 'r): 'r =
         let ctx = self.ctx
         let ret = fn(self)
         self.ctx <- ctx
@@ -148,7 +147,7 @@ and 't Result =
    | Unmatched
    | Matched of 't AST
    | LR      of parser: 't parser * (('t Result) -> 't Result)
-
+    
 let rec parse (self : 't parser)
               (tokens : Token array)
               (state : 't state): 't Result =
@@ -191,41 +190,24 @@ let rec parse (self : 't parser)
             Unmatched
 
 
-    | Bind(name, parser) ->
+    | Lens(lens, parser) ->
         match parse parser tokens state with
         | Unmatched ->
             Unmatched
-        | (Matched result) as it ->
-            state.ctx.[name] <- result
+        | Matched result as it ->
+            state.ctx <- lens state.ctx result
             it
-        | LR (pobj, stack') as it ->
+        | LR (pobj, stack') ->
             let stack(ast : 't Result) =
                 match stack' ast with
                 | Unmatched -> Unmatched
                 | Matched v as it ->
-                    state.ctx.[name] <- v
+                    state.ctx <- lens state.ctx v
                     it
                 | _ -> failwith "Impossible"
             LR(self, stack)
 
-    | Push(name, parser) ->
-        match parse parser tokens state with
-        | Unmatched ->
-            Unmatched
-        | (Matched result) as it ->
-            push' state.ctx name result
-            it
-        | LR (pobj, stack') as it ->
-            let stack(ast : 't Result) =
-                match stack' ast  with
-                | Unmatched -> Unmatched
-                | Matched v as it ->
-                    push' state.ctx name v
-                    it
-                | _ -> failwith "Impossible"
-            LR(self, stack)
-
-    | Named name ->
+    | Named(name, cons) ->
         Log <| fun () -> "start " + name
         let parser = state.lang.[name]
         let exit_task =
@@ -255,7 +237,7 @@ let rec parse (self : 't parser)
         State<'t>.with_context_recovery state <|
         fun state ->
         state.append name
-        state.ctx <- hashmap()
+        state.ctx <- cons()
         match parse parser tokens state with
         | Unmatched -> Unmatched | Matched v -> exit_task v
         | LR(pobj, stack') ->
@@ -268,7 +250,7 @@ let rec parse (self : 't parser)
         else
         State<'t>.left_recur state name <|
         fun state ->
-        let ctx = hashmap(state.ctx) // copy
+        let ctx = state.ctx // copy
         match parse parser tokens state with
         | LR _ | Unmatched -> Unmatched
         | Matched head     ->
@@ -277,7 +259,7 @@ let rec parse (self : 't parser)
             Log <| fun() -> sprintf "loop++, head : %A" head
             match State<'t>.with_context_recovery state
                   <| fun state ->
-                     state.ctx <- hashmap(ctx)
+                     state.ctx <- ctx
                      stack' head
                     with
             | Unmatched | LR _ -> head

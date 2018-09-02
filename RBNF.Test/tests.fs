@@ -23,11 +23,16 @@ let def_token str_lst =
 type sexpr =
 | Term of string
 | S    of sexpr list
+with static member copy this = this
 
-type Expr =
-| Add of Expr * Expr
+and Expr =
+| Add of left: Expr * right: Expr
 | Sym of string
+| Empty
 
+
+type default_value = Default
+    with static member copy this = this
 type MyTests(output:ITestOutputHelper) =
 
     [<Fact>]
@@ -36,10 +41,10 @@ type MyTests(output:ITestOutputHelper) =
         let v1 = V "123"
         let v2 = V "234"
         let node_name = "node"
-        let node = Named node_name
+        let node = Named(node_name, fun () -> Default)
         let node_impl = Or [And [node; v1]; v2]
         let tokens = def_token ["234"; "123"; "123"]
-        let state = State<string>.inst()
+        let state = State<default_value>.inst(Default)
         let (:=) = state.implement
         node := node_impl
         parse node tokens state |> sprintf "%A" |> output.WriteLine
@@ -51,14 +56,14 @@ type MyTests(output:ITestOutputHelper) =
         let v1 = V("a")
         let v2 = V("b")
         let v3 = V("c")
-        let node = Named("node")
-        let mid = Named("mid")
+        let node = Named("node", fun () -> Default)
+        let mid = Named("mid", fun () -> Default)
 
         let node_impl = Or [And [mid; v2]; v1]
         let mid_impl = And [node; v3]
         let tokens = def_token ["a"; "c"; "b"; "c"; "b"]
 
-        let state: State<string> = State<string>.inst()
+        let state = State<default_value>.inst(Default)
         let (:=) = state.implement
         node := node_impl
         mid  := mid_impl
@@ -86,7 +91,7 @@ type MyTests(output:ITestOutputHelper) =
         let identifier = V "abs"
         let plus_operator = V "+"
         let plus_name = "plus"
-        let plus = Named plus_name
+        let plus = Named(plus_name, fun () -> Default)
         let plus_impl = Or [And [plus; plus_operator; identifier]; identifier]
 
         let tokens =
@@ -104,7 +109,7 @@ type MyTests(output:ITestOutputHelper) =
                 "+"
                 "abs"
             ]
-        let state = State<string>.inst()
+        let state = State<default_value>.inst(Default)
         let (:=) = state.implement
         plus := plus_impl
         parse plus tokens state |> sprintf "%A" |> output.WriteLine
@@ -143,7 +148,7 @@ type MyTests(output:ITestOutputHelper) =
     [<Fact>]
     member __.``rewrite add``() =
         let state = State<Expr>.inst()
-        let plus = Named "plus"
+        let plus = Named("plus", fun () -> Add(Empty, Empty))
 
         let (:=) = state.implement
         let identifier =
@@ -155,25 +160,30 @@ type MyTests(output:ITestOutputHelper) =
 
         plus := Or
                 [
-                    And [plus.bind_to("emm");  C "+"; identifier]
-                    identifier
+                    And[
+                        Lens(
+                            (fun (Add(_, b)) (Value it) -> Add(it, b)),
+                            plus)
+                    
+                        C "+"
+                        Lens(
+                            (fun (Add(a, _)) (Value it) -> Add(a,  it)), 
+                            identifier)
+                       ]
+                    Lens((fun _ (Value it) -> it), identifier)
                 ]
                 =>
                 fun state ast ->
-                match ast with
-                | Nested arr ->
-                    let (Value l) = arr.[0]
-                    let (Value r) = arr.[2]
-                    Add(l, r) |> Value
-                | _ -> ast
-        let a, b = analyse analysis.crate [for each in ["plus"] -> each, state.lang.[each]]
+                state.ctx |> Value
+
+        let lexer_tb = analyse [for each in ["plus"] -> state.lang.[each]]
 
 
-        let tokens = lex None b {filename=""; text="abs+abs+abs"} |> Array.ofSeq
+        let tokens = lex None lexer_tb {filename=""; text="abs+abs+abs"} |> Array.ofSeq
 
         parse plus tokens state |> sprintf "%A" |> output.WriteLine
 
-        sprintf "%A \n %A" a b |> output.WriteLine
+        sprintf "%A" lexer_tb |> output.WriteLine
         0
     [<Fact>]
     member __.``lisp``() =
@@ -184,34 +194,36 @@ type MyTests(output:ITestOutputHelper) =
                    | _ -> failwith "emmm"
 
         let space = R "space" "\s+"
-        let sexpr = Named "sexpr"
+        let sexpr = Named("sexpr", fun () -> S [])
 
         let state = State<sexpr>.inst()
         let (:=) = state.implement
 
-        Named "space" := space  (** only for building auto lexer which contains `space` from grammar*)
+        Named("space", fun () -> failwith "emmm") := space  (** only for building auto lexer which contains `space` from grammar*)
 
-        sexpr := Or [And[C"("; Rep(0, -1, sexpr).bind_to("sexpr"); C")"]; term]
+        sexpr := Or [
+                    And[C"("; 
+                        Lens(
+                            (fun (S _) (Nested it) -> 
+                                  Array.map 
+                                  <| fun (Value it) -> it
+                                  <| it.ToArray()
+                                  |> List.ofArray
+                                  |> S
+                            ),
+                            Rep(0, -1, sexpr))
+                        C")"];
+
+                    Lens((fun _ (Value it) -> it), term)
+                    ]
                  =>
                  fun state ast ->
-                 match state.ctx.TryGetValue "sexpr" with
-                 | (false, _) -> ast
-                 | (true, it) ->
-                 match it with
-                 | Nested lst ->
-                    Seq.map
-                    <| fun (Value it) -> it
-                    <| lst
-                    |> List.ofSeq
-                    |> S
-                    |> Value
-                 | _ -> failwith "emmm"
+                 Value <| state.ctx
 
 
 
-        let bounds_map, lexer_factors =
-            analyse analysis.crate
-                    [for each in ["space";"sexpr";] -> each, state.lang.[each]]
+        let lexer_factors =
+            analyse [for each in ["space";"sexpr";] -> state.lang.[each]]
 
         let tokens = lex None lexer_factors {filename = ""; text = "(add 1 (mul 2 3))"}
                      |> Seq.filter (fun it -> it.name <> "space")
