@@ -4,8 +4,8 @@
 		<TargetFramework>netcoreapp2.0</TargetFramework>
 		<NoWarn>62</NoWarn>
 		<PackageId>RBNF</PackageId>
-		<Version>0.1.0</Version>
-		<Authors>yatli,thautwarm,ice1000</Authors>
+		<Version>0.3.0</Version>
+		<Authors>thautwarm,ice1000</Authors>
 		<Description>Parser combinator for .NET which handles context sensitive gramnars.</Description>
 		<PackageLicenseUrl>https://github.com/thautwarm/Ruiko.fs/blob/master/LICENSE</PackageLicenseUrl>
 		<PackageProjectUrl>https://github.com/thautwarm/Ruiko.fs</PackageProjectUrl>
@@ -14,6 +14,9 @@
 		<RepositoryUrl>https://github.com/thautwarm/Ruiko.fs</RepositoryUrl>
 	</PropertyGroup>
 
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+		<PlatformTarget>x86</PlatformTarget>
+	</PropertyGroup>
 
 	<ItemGroup>
 
@@ -30,10 +33,15 @@
 		<Compile Include="operator.fs" />
 	</ItemGroup>
 
-	<ItemGroup>
-		<Reference Include="Ruikowa.cs">
-			<HintPath>..\Ruikowa.cs\bin\Debug\netcoreapp2.0\Ruikowa.cs.dll</HintPath>
-		</Reference>
-	</ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Ruikowa.cs\Ruikowa.cs.csproj" PrivateAssets="all" />
+  </ItemGroup>
+  
+  <Target Name="CopyProjectReferencesToPackage" DependsOnTargets="ResolveProjectReferences">
+    <ItemGroup>
+      <BuildOutputInPackage Include="@(_ResolvedProjectReferencePaths)" />
+    </ItemGroup>
+  </Target>
 
 </Project>
