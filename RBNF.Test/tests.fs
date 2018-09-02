@@ -23,11 +23,12 @@ let def_token str_lst =
 type sexpr =
 | Term of string
 | S    of sexpr list
+| Empty_sexpr
 
 and Expr =
 | Add of left: Expr * right: Expr
 | Sym of string
-| Empty
+| Empty_expr
 
 
 type default_value = Default
@@ -147,7 +148,7 @@ type MyTests(output:ITestOutputHelper) =
     [<Fact>]
     member __.``rewrite add``() =
         let state = State<Expr>.inst()
-        let plus = Named("plus", fun () -> Add(Empty, Empty))
+        let plus = Named("plus", fun () -> Add(Empty_expr, Empty_expr))
 
         let (:=) = state.implement
         let identifier =
@@ -179,7 +180,7 @@ type MyTests(output:ITestOutputHelper) =
     member __.``lisp``() =
         
         let term = R "term" "[^\(\)\:\s]+"
-        let sexpr = Named("sexpr", fun () -> S [])
+        let sexpr = Named("sexpr", fun () -> Empty_sexpr)
 
         let state = State<sexpr>.inst()
         let (:=) = state.implement
@@ -188,7 +189,7 @@ type MyTests(output:ITestOutputHelper) =
                         C"("
                         Rep(0, -1, sexpr) 
                             % 
-                            fun (S _) (Nested it) ->
+                            fun _ (Nested it) ->
                             Array.map
                             <| fun (Value it) -> it
                             <| it.ToArray()
