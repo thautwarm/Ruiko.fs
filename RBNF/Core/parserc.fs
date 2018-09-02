@@ -32,6 +32,9 @@ type 't parser =
 
     static member inline (!) this =
         AnyNot this
+    
+    static member inline (%) (this, lens) = 
+        Lens(lens, this)
 
     member inline this.otherwise(other) =
         match this with
@@ -67,19 +70,18 @@ type 't parser =
 
     member inline this.repeat(at_least: int, at_most: int) = Rep(at_least, at_most, this)
 
-    member inline this.join(p: 't parser) =
-        ()
+    member inline this.join(p: 't parser) = And[this; Rep(0, -1, And [p; this])]
 
     member inline this.Item
         with get(at_least: int, at_most: int) = Rep(at_least, at_most, this)
 
 
 
-and 't rewrite = 't state -> 't AST -> 't AST
+and 't rewrite = 't state -> 't AST
 
 and 't state = {
-    mutable lr    : string option
-    mutable ctx   : 't
+    mutable lr     : string option
+    mutable context   : 't
     trace : string Trace Trace
     lang  : (string, 't parser) hashmap
     }
@@ -89,7 +91,7 @@ and 't state = {
         trace.Append(Trace())
         {
             lr = None
-            ctx = top
+            context = top
             trace = trace
             lang = hashmap()
         }
@@ -99,7 +101,7 @@ and 't state = {
         trace.Append(Trace())
         {
             lr = None
-            ctx = Unchecked.defaultof<'t>
+            context = Unchecked.defaultof<'t>
             trace = trace
             lang = hashmap()
         }
@@ -109,7 +111,7 @@ and 't state = {
     member inline this.current with get () = this.trace.[this.trace.EndIndex]
     member inline this.reset(history) =
             let (base', branch, ctx) = history
-            this.ctx <- ctx
+            this.context <- ctx
             this.trace.Reset(base')
             this.current.Reset(branch)
 
@@ -122,7 +124,7 @@ and 't state = {
     member inline this.append(e : string) =
         this.current.Append(e)
     member inline this.commit() =
-        (this.trace.Commit(), this.current.Commit(), this.ctx)
+        (this.trace.Commit(), this.current.Commit(), this.context)
 
     member inline this.contains(record : string) =
         this.current.Contains(record)
@@ -136,9 +138,9 @@ and 't state = {
         ret
 
     static member inline with_context_recovery (self: 't state) (fn: 't state -> 'r): 'r =
-        let ctx = self.ctx
+        let ctx = self.context
         let ret = fn(self)
-        self.ctx <- ctx
+        self.context <- ctx
         ret
 
 and 't State = 't state
@@ -155,12 +157,12 @@ let rec parse (self : 't parser)
     | Rewrite(parser, app) ->
         match parse parser tokens state with
         | Unmatched -> Unmatched
-        | Matched v -> Matched <| app state v
+        | Matched v -> Matched <| app state
         | LR(_, stack') ->
         let stack(res: 't Result) =
             match stack' res with
             | LR _ | Unmatched -> Unmatched
-            | Matched v -> Matched <| app state v
+            | Matched v -> Matched <| app state
         LR(self, stack)
 
     | Predicate pred ->
@@ -195,14 +197,14 @@ let rec parse (self : 't parser)
         | Unmatched ->
             Unmatched
         | Matched result as it ->
-            state.ctx <- lens state.ctx result
+            state.context <- lens state.context result
             it
         | LR (pobj, stack') ->
             let stack(ast : 't Result) =
                 match stack' ast with
                 | Unmatched -> Unmatched
                 | Matched v as it ->
-                    state.ctx <- lens state.ctx v
+                    state.context <- lens state.context v
                     it
                 | _ -> failwith "Impossible"
             LR(self, stack)
@@ -237,7 +239,7 @@ let rec parse (self : 't parser)
         State<'t>.with_context_recovery state <|
         fun state ->
         state.append name
-        state.ctx <- cons()
+        state.context <- cons()
         match parse parser tokens state with
         | Unmatched -> Unmatched | Matched v -> exit_task v
         | LR(pobj, stack') ->
@@ -250,7 +252,7 @@ let rec parse (self : 't parser)
         else
         State<'t>.left_recur state name <|
         fun state ->
-        let ctx = state.ctx // copy
+        let ctx = state.context // copy
         match parse parser tokens state with
         | LR _ | Unmatched -> Unmatched
         | Matched head     ->
@@ -259,7 +261,7 @@ let rec parse (self : 't parser)
             Log <| fun() -> sprintf "loop++, head : %A" head
             match State<'t>.with_context_recovery state
                   <| fun state ->
-                     state.ctx <- ctx
+                     state.context <- ctx
                      stack' head
                     with
             | Unmatched | LR _ -> head
