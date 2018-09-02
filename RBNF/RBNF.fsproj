@@ -1,39 +1,39 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>netcoreapp2.0</TargetFramework>
-    <NoWarn>62</NoWarn>
-    <PackageId>RBNF</PackageId>
-    <Version>0.1.0</Version>
-    <Authors>yatli,thautwarm,ice1000</Authors>
-    <Description>Parser combinator for .NET which handles context sensitive gramnars.</Description>
-    <PackageLicenseUrl>https://github.com/thautwarm/Ruiko.fs/blob/master/LICENSE</PackageLicenseUrl>
-    <PackageProjectUrl>https://github.com/thautwarm/Ruiko.fs</PackageProjectUrl>
-    <PackageTags>0.1.0</PackageTags>
-    <Copyright>Copyright 2017 thautwarm</Copyright>
-    <RepositoryUrl>https://github.com/thautwarm/Ruiko.fs</RepositoryUrl>
-  </PropertyGroup>
-  
-    
-  <ItemGroup>
-    
-    <Compile Include="infras.fs" />
-    <Compile Include="Core\caching_pool.fs" />
-    <Compile Include="Core\ast.fs" />
-    <Compile Include="AutoLexer\lexer.fs" />
-    
-  </ItemGroup>
+	<PropertyGroup>
+		<TargetFramework>netcoreapp2.0</TargetFramework>
+		<NoWarn>62</NoWarn>
+		<PackageId>RBNF</PackageId>
+		<Version>0.1.0</Version>
+		<Authors>yatli,thautwarm,ice1000</Authors>
+		<Description>Parser combinator for .NET which handles context sensitive gramnars.</Description>
+		<PackageLicenseUrl>https://github.com/thautwarm/Ruiko.fs/blob/master/LICENSE</PackageLicenseUrl>
+		<PackageProjectUrl>https://github.com/thautwarm/Ruiko.fs</PackageProjectUrl>
+		<PackageTags>0.1.0</PackageTags>
+		<Copyright>Copyright 2017 thautwarm</Copyright>
+		<RepositoryUrl>https://github.com/thautwarm/Ruiko.fs</RepositoryUrl>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <Compile Include="Core\parserc.fs" />
-    <Compile Include="AutoLexer\analyse.fs" />
-    <Compile Include="operator.fs" />
-  </ItemGroup>
 
-  <ItemGroup>
-    <Reference Include="Ruikowa.cs">
-      <HintPath>..\Ruikowa.cs\bin\Debug\netcoreapp2.0\Ruikowa.cs.dll</HintPath>
-    </Reference>
-  </ItemGroup>
+	<ItemGroup>
+
+		<Compile Include="infras.fs" />
+		<Compile Include="Core\caching_pool.fs" />
+		<Compile Include="Core\ast.fs" />
+		<Compile Include="AutoLexer\lexer.fs" />
+
+	</ItemGroup>
+
+	<ItemGroup>
+		<Compile Include="Core\parserc.fs" />
+		<Compile Include="AutoLexer\analyse.fs" />
+		<Compile Include="operator.fs" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Reference Include="Ruikowa.cs">
+			<HintPath>..\Ruikowa.cs\bin\Debug\netcoreapp2.0\Ruikowa.cs.dll</HintPath>
+		</Reference>
+	</ItemGroup>
 
 </Project>
