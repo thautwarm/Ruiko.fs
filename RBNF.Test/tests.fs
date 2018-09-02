@@ -49,6 +49,29 @@ type MyTests(output:ITestOutputHelper) =
         node := node_impl
         parse node tokens state |> sprintf "%A" |> output.WriteLine
         0
+  
+    [<Fact>]
+    member __.``recursive left recursion`` () =
+        let v1 = C "a"
+        let v2 = C "b"
+        let v3 = C "c"
+        let v4 = C "d"
+        
+        let node1 = Named("node1", fun () -> Default)
+        let node2 = Named("node2", fun () -> Default)
+        let node3 = Named("node3", fun () -> Default)
+
+        let state = State<default_value>.inst(Default)
+        let (:=) = state.implement
+
+        node1 := Or [And [node1; v1]; node2]
+        node2 := Or [And [node2; v2]; node3]
+        node3 := Or [And [node3; v3]; v4]
+        
+        let lexer_tb = analyse [v1; v2; v3; v4]
+        let tokens = lex None lexer_tb {filename = ""; text = "daaaa"} |> Array.ofSeq
+        parse node1 tokens state |> sprintf "%A" |> output.WriteLine
+        0
 
     [<Fact>]
     member __.``Indirect Left Recursion`` () =

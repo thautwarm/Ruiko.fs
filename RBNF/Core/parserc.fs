@@ -70,7 +70,7 @@ type 't parser =
 
     member inline this.repeat(at_least: int, at_most: int) = Rep(at_least, at_most, this)
 
-    member inline this.join(p: 't parser) = And[this; Rep(0, -1, And [p; this])]
+    member inline this.join(p: 't parser) = And [this; Rep(0, -1, And [p; this])]
 
     member inline this.Item
         with get(at_least: int, at_most: int) = Rep(at_least, at_most, this)
@@ -80,7 +80,7 @@ type 't parser =
 and 't rewrite = 't state -> 't AST
 
 and 't state = {
-    mutable lr     : string option
+    mutable lr     : (int, string) hashmap
     mutable context   : 't
     trace : string Trace Trace
     lang  : (string, 't parser) hashmap
@@ -90,7 +90,7 @@ and 't state = {
         let trace = Trace()
         trace.Append(Trace())
         {
-            lr = None
+            lr = hashmap()
             context = top
             trace = trace
             lang = hashmap()
@@ -100,7 +100,7 @@ and 't state = {
         let trace = Trace()
         trace.Append(Trace())
         {
-            lr = None
+            lr = hashmap()
             context = Unchecked.defaultof<'t>
             trace = trace
             lang = hashmap()
@@ -129,12 +129,11 @@ and 't state = {
     member inline this.contains(record : string) =
         this.current.Contains(record)
 
-    static member inline left_recur (self : 't state) (lr_name : string) (fn : 't state -> 'r) : 'r =
-        Log(fun() -> sprintf "start lr for %A" lr_name)
-        self.lr <- Some lr_name
+    static member inline left_recur (self : 't state) (lr_idx : int) (fn : 't state -> 'r) : 'r =
+        Log(fun() -> sprintf "start lr %A." self.lr)
         let ret = fn(self)
-        self.lr <- None
-        Log(fun () -> sprintf "end lr for %A" lr_name)
+        self.lr.Remove lr_idx |> ignore
+        Log(fun () -> sprintf "end lr %A." self.lr)
         ret
 
     static member inline with_context_recovery (self: 't state) (fn: 't state -> 'r): 'r =
@@ -148,7 +147,7 @@ and 't State = 't state
 and 't Result =
    | Unmatched
    | Matched of 't AST
-   | LR      of parser: 't parser * (('t Result) -> 't Result)
+   | LR      of parser: string * (('t Result) -> 't Result)
 
 let rec parse (self : 't parser)
               (tokens : Token array)
@@ -157,13 +156,13 @@ let rec parse (self : 't parser)
     | Rewrite(parser, app) ->
         match parse parser tokens state with
         | Unmatched -> Unmatched
-        | Matched v -> Matched <| app state
-        | LR(_, stack') ->
+        | Matched _ -> Matched <| app state
+        | LR(pobj, stack') ->
         let stack(res: 't Result) =
             match stack' res with
             | LR _ | Unmatched -> Unmatched
             | Matched v -> Matched <| app state
-        LR(self, stack)
+        LR(pobj, stack)
 
     | Predicate pred ->
         if pred state then
@@ -191,7 +190,6 @@ let rec parse (self : 't parser)
         else
             Unmatched
 
-
     | Lens(lens, parser) ->
         match parse parser tokens state with
         | Unmatched ->
@@ -207,7 +205,7 @@ let rec parse (self : 't parser)
                     state.context <- lens state.context v
                     it
                 | _ -> failwith "Impossible"
-            LR(self, stack)
+            LR(pobj, stack)
 
     | Named(name, cons) ->
         Log <| fun () -> "start " + name
@@ -225,15 +223,15 @@ let rec parse (self : 't parser)
 
         if state.contains name then
             Log <| fun() -> sprintf "state contains %A" name
-            if state.lr <> None then
+            if state.lr.ContainsKey state.end_index  then
                 Log <| fun () -> sprintf "match failed %A" name
                 Unmatched
             else
-            state.lr <- Some name
+            state.lr.Add (state.end_index, name)
             Log <| fun () -> sprintf "assign lr name: %A" name
             let stack (res: 't Result) =
                 res
-            LR(self, stack)
+            LR(name, stack)
         else
         Log <| fun () -> sprintf "state doesn't contain %A" name
         State<'t>.with_context_recovery state <|
@@ -243,15 +241,16 @@ let rec parse (self : 't parser)
         match parse parser tokens state with
         | Unmatched -> Unmatched | Matched v -> exit_task v
         | LR(pobj, stack') ->
-        if name <> state.lr.Value then
+        if pobj <> name then
             let stack(ast: 't Result) =
                 match stack' ast with
                 | Unmatched | LR _ -> Unmatched
                 | Matched v        -> exit_task v
-            LR(self, stack)
+            LR(pobj, stack)
         else
-        State<'t>.left_recur state name <|
+        State<'t>.left_recur state state.end_index <|
         fun state ->
+        Log <| fun() -> sprintf "lr for : %s %d" name state.end_index
         let ctx = state.context // copy
         match parse parser tokens state with
         | LR _ | Unmatched -> Unmatched
@@ -295,12 +294,12 @@ let rec parse (self : 't parser)
                 loop left
             | Matched _ as it ->
                 it
-            | LR(_, stack') ->
+            | LR(pobj, stack') ->
             let stack ast =
                 match stack' ast with
                 | Unmatched | LR _ -> loop left
                 | Matched _ as it  -> it
-            LR(self, stack)
+            LR(pobj, stack)
         loop orz
     | And ands ->
         let history = state.commit()
@@ -318,7 +317,7 @@ let rec parse (self : 't parser)
             | Matched v ->
                 merge_nested nested v
                 loop is_lr nested left
-            | LR(_, stack') ->
+            | LR(pobj, stack') ->
             if is_lr then Unmatched
             else
             let stack ast =
@@ -328,7 +327,7 @@ let rec parse (self : 't parser)
                 | Matched v        ->
                 merge_nested nested' v
                 loop true nested' left
-            LR(self, stack)
+            LR(pobj, stack)
         loop false nested ands
 
     | Rep (at_least, at_most, parser)->

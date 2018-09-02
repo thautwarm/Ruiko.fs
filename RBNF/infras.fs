@@ -2,6 +2,7 @@
 
 
 type ('k, 'v) hashmap = System.Collections.Generic.Dictionary<'k, 'v>
+type 't hashset = System.Collections.Generic.HashSet<'t>
 type 'T arraylist = System.Collections.Generic.List<'T>
 
 type 'a M =
@@ -22,7 +23,8 @@ let (&=) a b =
 let mutable _log_started = false
 
 let inline Log app =
-#if DEBUG
+    //()
+
     let msg = app()
     if _log_started then
 
@@ -30,6 +32,4 @@ let inline Log app =
     else
         _log_started <- true
         System.IO.File.WriteAllText("../r_log", msg + "\n")
-#else
-    ()
-#endif
+
