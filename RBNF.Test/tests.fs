@@ -164,10 +164,10 @@ type MyTests(output:ITestOutputHelper) =
                         Lens(
                             (fun (Add(_, b)) (Value it) -> Add(it, b)),
                             plus)
-                    
+
                         C "+"
                         Lens(
-                            (fun (Add(a, _)) (Value it) -> Add(a,  it)), 
+                            (fun (Add(a, _)) (Value it) -> Add(a,  it)),
                             identifier)
                        ]
                     Lens((fun _ (Value it) -> it), identifier)
@@ -202,10 +202,10 @@ type MyTests(output:ITestOutputHelper) =
         Named("space", fun () -> failwith "emmm") := space  (** only for building auto lexer which contains `space` from grammar*)
 
         sexpr := Or [
-                    And[C"("; 
+                    And[C"(";
                         Lens(
-                            (fun (S _) (Nested it) -> 
-                                  Array.map 
+                            (fun (S _) (Nested it) ->
+                                  Array.map
                                   <| fun (Value it) -> it
                                   <| it.ToArray()
                                   |> List.ofArray

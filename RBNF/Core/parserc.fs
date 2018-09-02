@@ -17,7 +17,7 @@ type 't parser =
     | Literal   of literal
     | Any
     (**atom*)
-    | Lens  of ('t -> 't AST -> 't) * parser<'t>
+    | Lens  of ('t -> 't AST -> 't) * 't parser
     | Named of string * (unit -> 't)
 
     (** composed *)
@@ -93,7 +93,7 @@ and 't state = {
             trace = trace
             lang = hashmap()
         }
-    
+
     static member inline inst(): 't state =
         let trace = Trace()
         trace.Append(Trace())
@@ -147,7 +147,7 @@ and 't Result =
    | Unmatched
    | Matched of 't AST
    | LR      of parser: 't parser * (('t Result) -> 't Result)
-    
+
 let rec parse (self : 't parser)
               (tokens : Token array)
               (state : 't state): 't Result =
