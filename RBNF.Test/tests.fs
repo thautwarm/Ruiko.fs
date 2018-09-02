@@ -25,15 +25,15 @@ type sexpr =
 | S    of sexpr list
 | Empty_sexpr
 
-type Expr =
-| Add of left: Expr * right: Expr
+type expr =
+| Add of left: expr * right: expr
 | Sym of string
 | Empty_expr
 
-type RecurNode = 
-| Node1     of RecurNode * string
-| Node2     of RecurNode * string
-| Node3     of RecurNode * string
+type recur_node = 
+| Node1     of recur_node * string
+| Node2     of recur_node * string
+| Node3     of recur_node * string
 | LitNode   of string 
 | Empty_recur_node
 
@@ -68,7 +68,7 @@ type MyTests(output:ITestOutputHelper) =
         let node2 = Named("node2", fun () -> Node2(Empty_recur_node, ""))
         let node3 = Named("node3", fun () -> Node3(Empty_recur_node, ""))
 
-        let state = State<RecurNode>.inst()
+        let state = State<recur_node>.inst()
         let (:=) = state.implement
 
         node1 := Or [And [
@@ -165,7 +165,7 @@ type MyTests(output:ITestOutputHelper) =
                 "+"
                 "abs"
             ]
-        let state = State<Expr>.inst(top)
+        let state = State<expr>.inst(top)
         let (:=) = state.implement
         plus := plus_impl
         parse plus tokens state |> sprintf "%A" |> output.WriteLine
@@ -203,7 +203,7 @@ type MyTests(output:ITestOutputHelper) =
 
     [<Fact>]
     member __.``rewrite add``() =
-        let state = State<Expr>.inst()
+        let state = State<expr>.inst()
         let plus = Named("plus", fun () -> Add(Empty_expr, Empty_expr))
 
         let (:=) = state.implement
