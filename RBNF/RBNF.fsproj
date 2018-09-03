@@ -5,8 +5,8 @@
     <NoWarn>62</NoWarn>
     <PackageId>RBNF</PackageId>
     <Version>0.1.0</Version>
-    <Authors>yatli,thautwarm</Authors>
-    <Description>Parser combinator for .NET could handle with context sensitive gramnars.</Description>
+    <Authors>yatli,thautwarm,ice1000</Authors>
+    <Description>Parser combinator for .NET which handles context sensitive gramnars.</Description>
     <PackageLicenseUrl>https://github.com/thautwarm/Ruiko.fs/blob/master/LICENSE</PackageLicenseUrl>
     <PackageProjectUrl>https://github.com/thautwarm/Ruiko.fs</PackageProjectUrl>
     <PackageTags>0.1.0</PackageTags>
@@ -28,9 +28,6 @@
     <Compile Include="Core\parserc.fs" />
     <Compile Include="AutoLexer\analyse.fs" />
     <Compile Include="operator.fs" />
-  
-  
-    <Compile Include="Collections\Lisp\low_level_lisp.fs" />
   </ItemGroup>
 
   <ItemGroup>
