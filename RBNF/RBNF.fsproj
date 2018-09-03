@@ -17,7 +17,7 @@
     
   <ItemGroup>
     
-    <Compile Include="Infras.fs" />
+    <Compile Include="infras.fs" />
     <Compile Include="Core\caching_pool.fs" />
     <Compile Include="Core\ast.fs" />
     <Compile Include="AutoLexer\lexer.fs" />
