@@ -4,6 +4,7 @@ open System.Text.RegularExpressions
 open Ruikowa.CSharp
 open System
 open RBNF
+open RBNF
 
 type lexer_factor =
     | RegexFactor  of Regex
@@ -75,48 +76,6 @@ let lex (cast_map: cast_map option)
     let mutable lineno = 0
     let mutable colno  = 0
     let filename = src.filename
-    match cast_map with
-    | None ->
-        let rec loop view = seq{
-            match view with
-            | {ref = _; offset = offset} when offset = n ->
-                ()
-            | _ ->
-            let picked =
-                let match' = lexer_factor_match view
-                List.tryPick
-                <| fun {name=name; factor=factor} ->
-                    match match' factor with
-                    | None -> None
-                    | Some it -> Some (name, it)
-                <| lexer_table
-            match picked with
-            | None ->
-                let {ref = value; offset = offset;}: string_view = view
-                let sample = value.Substring(offset, offset + 15)
-                failwithf "unknown string head: `%s` at line %d, column %d, file %s"
-                            sample lineno colno filename
-            | Some (name, word) ->
-                yield {
-                        name = CachingPool.cast name
-                        value = word
-                        filename = filename
-                        colno = colno
-                        offset = view.offset
-                        lineno = lineno
-                      }
-                let word_len = String.length word
-                match StrUtils.StringCount(word, '\n') with
-                | 0 ->
-                    colno <- colno + word_len
-                | line_inc ->
-                    lineno <- lineno + line_inc
-                    colno  <- word_len - StrUtils.StringFindIndexRight(word, '\n') - 1
-
-                yield! loop({view with offset = view.offset + word_len})
-            }
-        in loop view
-    | Some cast_map ->
     let rec loop view = seq{
         match view with
         | {ref = _; offset = offset} when offset = n ->
@@ -138,9 +97,12 @@ let lex (cast_map: cast_map option)
                         sample lineno colno filename
         | Some (name, word) ->
             let tk_name, tk_word =
-                match Map.tryFind word cast_map with
-                | None      -> CachingPool.cast name, word
-                | Some name -> CachingPool.cast name, CachingPool.cast word
+                match cast_map with
+                | Some cast_map ->
+                    match Map.tryFind word cast_map with
+                    | None      -> CachingPool.cast name, word
+                    | Some name -> CachingPool.cast name, CachingPool.cast word
+                | None -> CachingPool.cast name, word
             yield  {
                     name = tk_name
                     value = tk_word
@@ -160,8 +122,6 @@ let lex (cast_map: cast_map option)
         }
 
     in loop view
-
-
 
 let lexer_tb_to_const lexer_tb =
     [
