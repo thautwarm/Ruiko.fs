@@ -95,15 +95,7 @@ and 't state = {
             lang = hashmap()
         }
 
-    static member inline inst(): 't state =
-        let trace = Trace()
-        trace.Append(Trace())
-        {
-            lr = hashset()
-            context = Unchecked.defaultof<'t>
-            trace = trace
-            lang = hashmap()
-        }
+    static member inline inst(): 't state = state.inst(Unchecked.defaultof<'t>)
 
     member inline this.end_index with get() = this.trace.EndIndex
     member inline this.max_fetched with get() = this.trace.MaxFetched
@@ -192,8 +184,7 @@ let rec parse (self : 't parser)
 
     | Lens(lens, parser) ->
         match parse parser tokens state with
-        | Unmatched ->
-            Unmatched
+        | Unmatched -> Unmatched
         | Matched result as it ->
             state.context <- lens state.context result
             it
@@ -228,9 +219,7 @@ let rec parse (self : 't parser)
                 Log <| fun () -> sprintf "match failed %A" name
                 Unmatched
             else
-            let stack (res: 't Result) =
-                res
-            LR(name, stack)
+            LR(name, id)
         else
         State<'t>.with_context_recovery state <|
         fun state ->
@@ -238,7 +227,8 @@ let rec parse (self : 't parser)
         state.context <- cons()
         let history = state.commit()
         match parse parser tokens state with
-        | Unmatched -> Unmatched | Matched v -> exit_task v
+        | Unmatched -> Unmatched
+        | Matched v -> exit_task v
         | LR(pobj, stack') ->
         if pobj <> name then
             let stack(ast: 't Result) =
